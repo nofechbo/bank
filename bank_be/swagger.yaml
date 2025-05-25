@@ -1,0 +1,170 @@
+openapi: 3.0.0
+info: 
+  title: banking app
+  version: 1.0.0
+  description: backend for banking app project
+
+paths:
+  /auth/signup:
+    post:
+      summary: Sign up a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+                - phone
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                phone:
+                  type: string
+                  pattern: '^05[0-9]{8}$'
+                  example: "0541234567"
+                  description: Israeli phone number (10 digits, must start with 05)
+      responses:
+        '200':
+          description: Sign-up initiated, verification link sent
+        '400':
+          description: Invalid input (e.g., missing or malformed fields)
+        '409':
+          description: Duplicate registration (email or phone already in use)
+        '500':
+          description: Internal error (e.g., failed to send verification code)
+
+
+  /auth/resend:
+    post:
+      summary: Resend verification email to pending user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: New verification code sent
+        '400':
+          description: Missing or invalid email
+        '404':
+          description: No pending verification found for this email
+  
+  /auth/verify:
+    get:
+      summary: Verify email via secure token
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified and registration complete
+        '400':
+          description: Invalid or expired token
+        '404':
+          description: No pending verification found
+        '410':
+          description: Verification link expired
+
+  /auth/login:
+    post:
+      summary: Log in an existing user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        '200':
+          description: Login successful
+        '400':
+          description: Missing credentials
+        '401':
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      summary: Log out the current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          description: Unauthorized (invalid or expired token)
+
+  /dashboard:
+    get:
+      summary: Get user dashboard (balance + transactions)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Returns user's info, balance and transaction history
+        '401':
+          description: Unauthorized (invalid or expired token)
+
+  /dashboard/transfer:
+    post:
+      summary: Transfer money to another user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - toEmail
+                - amount
+              properties:
+                toEmail:
+                  type: string
+                  format: email
+                amount:
+                  type: number
+                  minimum: 0.01
+      responses:
+        '200':
+          description: Transfer successful
+        '400':
+          description: Invalid email or insufficient funds
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

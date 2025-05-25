@@ -1,0 +1,30 @@
+# Node modules
+node_modules/
+
+# TypeScript build output
+dist/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+!.env.example
+
+# OS files
+.DS_Store
+
+# VSCode config (optional, if you want to ignore user/editor-specific stuff)
+.vscode/
+
+# Debug and temp
+*.swp
+*.tmp
+
+# swagger UI
+swagger-ui-dist/
+
+#prisma client output
+src/generated/
