@@ -29,11 +29,13 @@ This is a secure, full-featured banking web application built with a React front
 
 ## 📂 Repository Structure
 
+```
+.
 bank/
 ├── bank_fe/ # Frontend (React, Vite)
 ├── bank_be/ # Backend (Node.js, Express, Prisma)
 └── README.md # General overview (this file)
-
+```
 
 - For backend-specific instructions, see [`bank_be/README.md`](./bank_be/README.md)
 - For frontend setup and usage, see [`bank_fe/README.md`](./bank_fe/README.md)
