@@ -21,6 +21,7 @@ This is a secure, full-featured banking web application built with a React front
 - JWT-based authentication and logout
 - Secure transfer of funds between users
 - Transaction history and balance dashboard
+- Real-time updates using WebSockets (live dashboard refresh)
 - Auto-cleanup of expired tokens and unverified accounts
 - Responsive UI with polished components
 - REST API with Swagger documentation

@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../types/auth.types.js";
 import { dbInstance } from "../db/prisma.js";
+import { sendDashboardUpdate } from "../websockets/websocketServer.js";
 
 export async function transfer(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user) {
@@ -48,6 +49,9 @@ export async function transfer(req: AuthenticatedRequest, res: Response): Promis
             }
         })   
     ]);
+
+    sendDashboardUpdate(sender.email);
+    sendDashboardUpdate(receiver!.email);
 
     res.status(200).json({
         message: 'Transfer successful',

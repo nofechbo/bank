@@ -3,7 +3,7 @@ import { API_BASE_URL } from "../config"
 import { ContactUs } from "../components/ContactUs"
 import { LogoHeader } from "../components/LogoHeader"
 import { useAuth } from "../contexts/AuthContext"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import LoadingBox from "../components/LoadingBox"
 import { useNavigate } from "react-router-dom"
 import type { DashboardData } from "../types/dashboardTypes"
@@ -12,6 +12,7 @@ import WelcomeCard from "../components/dashboardComponents/WelcomeCard"
 import TransactionList from "../components/dashboardComponents/TransactionList"
 import DashboardChart from "../components/dashboardComponents/DashboardChart"
 import { Box, Button, Card } from "@mui/material"
+import { useDashboardSocket } from "../components/dashboardComponents/UseDashboardSocket"
 
 export default function DashboardPage() {
     const [errorMessage, setErrorMessage] = useState("");
@@ -20,7 +21,35 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const { token } = useAuth();
+    const { token, email } = useAuth();
+    
+    const fetchDashboard = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/dashboard`, {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`, // from useAuth()
+                },
+            });
+
+            const data: DashboardData | { error: string } = await response.json();
+            if (!response.ok || "error" in data) {
+                const errorMessage = "error" in data ? data.error : "Dashboard loading failed";
+                throw new Error(errorMessage);
+            } else {
+                setDashboardData(data);
+                setShowSuccess(true);
+            }
+
+        } catch(err) {
+            console.error(err);
+            setErrorMessage(err instanceof Error ? err.message : "Dashboard loading failed");
+        
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
         if (!token) {
             setErrorMessage("Missing or invalid token.");
@@ -28,37 +57,16 @@ export default function DashboardPage() {
             return;
         }
 
-        const fetchDashboard = async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/dashboard`, {
-                    method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${token}`, // from useAuth()
-                    },
-                });
-
-                const data: DashboardData | { error: string } = await response.json();
-                if (!response.ok || "error" in data) {
-                    const errorMessage = "error" in data ? data.error : "Dashboard loading failed";
-                    throw new Error(errorMessage);
-                } else {
-                    setDashboardData(data);
-                    setShowSuccess(true);
-                }
-
-            } catch(err) {
-                console.error(err);
-                setErrorMessage(err instanceof Error ? err.message : "Dashboard loading failed");
-            
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchDashboard();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    
 
+    useDashboardSocket({
+        token,
+        userEmail: email ?? null,
+        onUpdate: fetchDashboard,
+    });
+    
     const handleLogout = async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/logout`, {

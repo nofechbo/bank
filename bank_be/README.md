@@ -7,6 +7,7 @@ This is the backend for a secure full-stack banking web application.
 * User signup with email verification
 * JWT-based authentication and logout
 * Balance and transaction dashboard
+* Real-time dashboard updates via WebSockets (after transfers)
 * Transfer funds between users
 * Revoked token handling
 * Periodic cleanup of unverified users and expired tokens
@@ -27,7 +28,8 @@ This is the backend for a secure full-stack banking web application.
 │   ├── middleware/        # Auth middleware
 │   ├── routes/            # Route definitions
 │   ├── types/             # Shared TypeScript types
-│   ├── utils/             # Email utils
+│   ├── utils/             # Email utils  
+│   ├── websockets/        # WebSocket server and push logic
 │   └── index.ts           # App entry point
 ├── swagger.yaml           # Swagger OpenAPI 3.0 spec
 ├── tsconfig.json
@@ -90,6 +92,15 @@ Visit: `http://localhost:3030/api-docs` (when running locally)
 * Uses `swagger-ui-express`
 * Based on `swagger.yaml` in the root directory
 * Covers all major routes including `/auth/*` and `/dashboard/*`
+
+---
+
+## Real-Time WebSocket Updates
+
+* A WebSocket server runs alongside the Express server
+* Authenticated clients (via JWT) register their connection on page load
+* On successful fund transfer, the server sends a dashboard:update message to both sender and receiver
+* The frontend responds by refreshing the dashboard
 
 ---
 
