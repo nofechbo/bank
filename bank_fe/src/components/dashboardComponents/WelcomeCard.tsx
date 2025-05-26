@@ -45,13 +45,23 @@ export default function WelcomeCard({ name, email, phone,joinedAt, balance }: We
 
         {/* Right: Text */}
         <Box>
-          <Typography variant="h1" fontWeight={600} fontSize="45px" gutterBottom>
+          <Typography
+            variant="h1"
+            fontWeight={600}
+            fontSize={{ xs: "24px", sm: "30px", md: "45px" }}
+            gutterBottom
+          >
             Welcome back, {name}!
           </Typography>
-          <Typography variant="body1" fontSize="30px" color="text.secondary">
+          <Typography variant="body1" fontSize={{ xs: "18px", sm: "22px", md: "30px" }}>
             Your current balance is:
           </Typography>
-          <Typography variant="h4" fontWeight={700} fontSize="35px" color="primary">
+          <Typography
+              variant="h4"
+              fontWeight={700}
+              fontSize={{ xs: "24px", sm: "28px", md: "35px" }}
+              color="primary"
+            >
             ${balance}
           </Typography>
         </Box>

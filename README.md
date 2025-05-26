@@ -24,6 +24,7 @@ This is a secure, full-featured banking web application built with a React front
 - Real-time updates using WebSockets (live dashboard refresh)
 - Auto-cleanup of expired tokens and unverified accounts
 - Responsive UI with polished components
+- All frontend pages are fully mobile-friendly with adaptive layouts and scrollable components.
 - REST API with Swagger documentation
 
 ---

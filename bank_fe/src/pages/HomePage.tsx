@@ -29,9 +29,12 @@ export default function HomePage() {
         right: 0,
         bottom: 0,
 
-        backgroundImage: 'url("/assets/images/homepage/tunabank_homepage.png")',
-        backgroundSize: "contain",
-        backgroundPosition: "center",
+        backgroundImage: { 
+          xs: 'url("/assets/images/homepage/tunabank_homepage_mobile.png")', 
+          md: 'url("/assets/images/homepage/tunabank_homepage.png")' 
+        },
+        backgroundSize: { xs: "cover", md: "contain" },
+        backgroundPosition: { xs: "center", md: "center" },
         backgroundRepeat: "no-repeat",
         backgroundColor: "#3a5875", 
         // Layout for buttons at bottom
@@ -46,13 +49,14 @@ export default function HomePage() {
       <Box
         display="flex"
         gap={2}
+        flexDirection={{ xs: "column", sm: "row" }}
         flexWrap="wrap"
         justifyContent="center"
         sx={{
-          width: "100%",
+          width: { xs: "80%", sm: "100%" },
           maxWidth: "700px",
           px: 2,
-          mb: 4,
+          mb: { xs: 22, md: 4 },
         }}
       >
         <Button
@@ -63,14 +67,14 @@ export default function HomePage() {
             backgroundColor: "#f0c14b",
             color: "#333",
             fontWeight: "bold",
-            fontSize: "18px",
-            padding: "10px 20px",
+            fontSize: { xs: "14px", sm: "18px" },
+            padding: { xs: "8px 16px", sm: "10px 20px" },
             borderRadius: "25px",
             '&:hover': {
               borderColor: "#ddb347",
               backgroundColor: "rgba(240, 193, 75, 0.1)",
             },
-            minWidth: "300px",
+            minWidth: { xs: "50px", sm: "300px" },
           }}
         >
           Open a New Pawcount
@@ -83,14 +87,14 @@ export default function HomePage() {
             backgroundColor: "#f0c14b",
             color: "#333",
             fontWeight: "bold",
-            fontSize: "18px",
-            padding: "10px 20px",
+            fontSize: { xs: "14px", sm: "18px" },
+            padding: { xs: "8px 16px", sm: "10px 20px" },
             borderRadius: "25px",
             '&:hover': {
               borderColor: "#ddb347",
               backgroundColor: "rgba(240, 193, 75, 0.1)",
             },
-            minWidth: "200px",
+            minWidth: { xs: "50px", sm: "200px" },
           }}
         >
           Already a Member? Paw In

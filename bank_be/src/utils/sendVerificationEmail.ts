@@ -1,14 +1,14 @@
 import nodemailer from 'nodemailer';
 
 const APP_NAME = "Tuna Bank LTD"
-const from = `${APP_NAME} <${process.env.GMAIL_USER}>`;
+const from = `${APP_NAME} <${process.env.GMAIL_ADDRESS}>`;
 
 export async function sendVerificationEmail(to: string, clientName: string, link: string): Promise<void> {
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
             user: process.env.GMAIL_ADDRESS,
-            pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not your main Gmail password
+            pass: process.env.GMAIL_APP_PASSWORD,
         },
     });
 

@@ -11,15 +11,20 @@ import ErrorModal from "../components/ErrorModal"
 import WelcomeCard from "../components/dashboardComponents/WelcomeCard"
 import TransactionList from "../components/dashboardComponents/TransactionList"
 import DashboardChart from "../components/dashboardComponents/DashboardChart"
-import { Box, Button, Card } from "@mui/material"
+import { Box, Button, Card, useMediaQuery, useTheme } from "@mui/material"
 import { useDashboardSocket } from "../components/dashboardComponents/UseDashboardSocket"
+import { ActionButtons } from "../components/dashboardComponents/ActionButtons"
 
 export default function DashboardPage() {
     const [errorMessage, setErrorMessage] = useState("");
     const [showSuccess, setShowSuccess] = useState(false);
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [mobileTab, setMobileTab] = useState<"transactions" | "chart">("transactions");
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+
 
     const { token, email } = useAuth();
     
@@ -107,19 +112,58 @@ export default function DashboardPage() {
                         
             {/* success Modal */}
             {showSuccess && dashboardData && (
-                <Box sx={{ flexGrow: 1, px: 3 }}>
+                <Box 
+                    sx={{ 
+                        flexGrow: 1,
+                        px: 3,
+                        [theme.breakpoints.down("md")]: {
+                            width: "100%",
+                            maxWidth: "900px",
+                            mx: "auto",
+                        },
+                    }}
+                >
                     <Box
                         sx={{
-                            display: "flex",
+                            display: { xs: "block", md: "flex" },
                             gap: 3,
                             alignItems: "stretch",
-                            height: 650,
+                            height: { xs: "auto", md: 650 },
                         }}
                     >
-                        
-                        {/* Left (2/3 width) */}
-                        <Box sx={{ flex: 2, display: "flex", flexDirection: "column", height: "100%" }}>
-                            <WelcomeCard
+                        <Box
+                            sx={{
+                                display: { xs: "flex", md: "none" }, //only show on mobile
+                                justifyContent: "center",
+                                gap: 2,
+                                mb: 2,
+                            }}
+                            >
+                            <Button
+                                variant={mobileTab === "transactions" ? "contained" : "outlined"}
+                                onClick={() => setMobileTab("transactions")}
+                            >
+                                Transactions
+                            </Button>
+                            <Button
+                                variant={mobileTab === "chart" ? "contained" : "outlined"}
+                                onClick={() => setMobileTab("chart")}
+                            >
+                                Chart
+                            </Button>
+                        </Box>
+
+                        {/* Left (2/3 width / Full Width on Mobile) */}
+                        <Box
+                            sx={{
+                                flex: 2,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 3,
+                                height: "auto",
+                            }}
+                        >                            
+                        <WelcomeCard
                                 name={dashboardData.name}
                                 email={dashboardData.email}
                                 phone={dashboardData.phone}
@@ -127,54 +171,24 @@ export default function DashboardPage() {
                                 balance={dashboardData.balance}
                             />
 
-                            <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+                            {!isDesktop && (
+                                <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={handleLogout} />
+                            )}
+
+                            {/* Only show Transactions on mobile when selected */}
+                            {(mobileTab === "transactions" || isDesktop) && (
                                 <TransactionList transactions={dashboardData.transactions} />
-                            </Box>
+                            )}
                         </Box>
 
                         {/* Right (1/3 width) */}
-                        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
-                            <Box
-                            sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                mb: 3,
-                            }}
-                            >
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={() => navigate("/transfer")}
-                                    sx={{
-                                        px: 3,         // horizontal padding
-                                        py: 1.5,       // vertical padding
-                                        fontSize: "15px",
-                                        fontWeight: 600,
-                                        borderRadius: 2,
-                                        ml: 1.5,
-                                    }}
-                                >
-                                    Transfer Funds
-                                </Button>
-
-                                <Button
-                                    variant="contained"
-                                    color="error"
-                                    onClick={handleLogout}
-                                    sx={{
-                                        px: 3,
-                                        py: 1.5,
-                                        fontSize: "15px",
-                                        fontWeight: 600,
-                                        borderRadius: 2,
-                                        mr: 2.5,
-                                    }}
-                                >
-                                    Log Out
-                                </Button>
-                            </Box>
+                        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", height: "auto", mt: { xs: 4, md: 0 }, }}>
+                        {isDesktop && (
+                            <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={handleLogout} />
+                        )}
                             
                             {/*chart*/}
+                            {(mobileTab === "chart" || isDesktop) && (
                             <Card
                                 sx={{
                                     flex: 1,
@@ -185,12 +199,14 @@ export default function DashboardPage() {
                                     p: 0,
                                     borderRadius: 3,
                                     boxShadow: 4,
+                                    mb: { xs: 4, md: 0 },
                                 }}
                             >
                                 <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
                                     <DashboardChart transactions={dashboardData.transactions} />
                                 </Box>
                             </Card>
+                            )}
                         </Box>
                     </Box>
                 </Box>

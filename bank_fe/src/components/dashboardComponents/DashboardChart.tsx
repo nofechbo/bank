@@ -135,8 +135,16 @@ export default function DashboardChart({ transactions }: DashboardChartProps) {
             </Box>
 
             {/* Chart (fills remaining space) */}
-            <Box sx={{ flex: 1, minHeight: 0 }}>
-                <ReactECharts option={option} style={{ width: "100%", height: 400 }} />
+            <Box sx={{ width: "100%", overflowX: "auto", px: 1 }}>
+                <ReactECharts
+                    option={option}
+                    style={{
+                        width: "100%",
+                        maxWidth: "100%",
+                        height: 300,
+                    }}
+                />
+
             </Box>
         </Box>
     );

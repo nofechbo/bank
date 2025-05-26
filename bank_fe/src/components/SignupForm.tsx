@@ -3,7 +3,7 @@ import { API_BASE_URL } from "../config";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { handleResendLink } from "./HandleResendLink";
-import { StyledCard, ContentBox } from "../styles/Styles";
+import { StyledCard, ShrinkBox, GrowBox } from "../styles/Styles";
 import ErrorModal from "./ErrorModal";
 import {
   Box,
@@ -58,12 +58,12 @@ const SignupForm = () => {
         setDuplicateEmail(false);
         setDuplicatePhone(false);
 
-        setIsSubmitting(true);
-
         if (!confirmed) {
             setErrorMessage("You must confirm the terms of service.");
             return;
         }
+
+        setIsSubmitting(true);
 
         try {
             const response = await fetch(`${API_BASE_URL}/auth/signup`, {
@@ -104,22 +104,22 @@ const SignupForm = () => {
         <>
           <StyledCard>
              {/* Left: Illustration */}
-            <ContentBox>
+            <ShrinkBox>
               <Box
                   component="img"
                   src="/assets/images/illustrations/posting_photo.svg"
                   alt="Register"
                   sx={{ width: "100%", maxWidth: 400 }}
               />
-            </ContentBox>
+            </ShrinkBox>
       
             {/* Right: Form */}
-            <ContentBox>
+            <GrowBox>
                 <Typography variant="h5" mb={2}>
                 Sign Up
                 </Typography>
     
-                <Box component="form" onSubmit={handleSubmit}>
+                <Box component="form" onSubmit={handleSubmit} sx={{ gap: 1, display: "flex", flexDirection: "column" }}>
                     <TextField
                         fullWidth
                         label="Full Name"
@@ -127,7 +127,7 @@ const SignupForm = () => {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        margin="normal"
+                        margin="dense"
                     />
                     <TextField
                         fullWidth
@@ -137,7 +137,7 @@ const SignupForm = () => {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        margin="normal"
+                        margin="dense"
                     />
                     <TextField
                         fullWidth
@@ -146,7 +146,7 @@ const SignupForm = () => {
                         value={formData.phone}
                         onChange={handleChange}
                         required
-                        margin="normal"
+                        margin="dense"
                         inputProps={{
                         pattern: "^05\\d{8}$",
                         title: "Phone must start with 05 and be 10 digits",
@@ -160,7 +160,7 @@ const SignupForm = () => {
                         value={formData.password}
                         onChange={handleChange}
                         required
-                        margin="normal"
+                        margin="dense"
                         inputProps={{ minLength: 6 }}
                     />
 
@@ -206,7 +206,7 @@ const SignupForm = () => {
                         </Typography>
                     </Box>
                 </Box>
-            </ContentBox>
+            </GrowBox>
         </StyledCard>
       
         {/* Error Modal */}
@@ -246,6 +246,7 @@ const SignupForm = () => {
                     p: 5,
                     borderRadius: 2,
                     maxWidth: 500,
+                    width: "90%",
                     mx: "auto",
                     mt: "12%",
                     textAlign: "center",

@@ -24,7 +24,7 @@ import LoadingButton from "@mui/lab/LoadingButton";
     return (
         <Modal open={open} onClose={onClose} >
             <Box
-                sx={{
+                sx={(theme) => ({
                     bgcolor: "background.paper",
                     p: 4,
                     borderRadius: 2,
@@ -32,7 +32,10 @@ import LoadingButton from "@mui/lab/LoadingButton";
                     mx: "auto",
                     mt: "15%",
                     textAlign: "center",
-                }}
+                    [theme.breakpoints.down("sm")]: {
+                        width: "90%",
+                      },
+                })}
             >
                 <Typography variant="h6" gutterBottom >
                      {title || "Error" }

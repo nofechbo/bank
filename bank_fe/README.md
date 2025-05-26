@@ -80,6 +80,25 @@ The built files will be in `/dist`. You can deploy them using any static server 
 
 ---
 
+## 📱 Mobile Responsiveness
+
+The UI is fully responsive and optimized for mobile screens:
+The UI is fully responsive and optimized for mobile screens:
+
+- All core pages (Signup, Login, Dashboard, Transfer) scale and align properly on small devices.
+- Navigation and layout adapt dynamically using Material UI breakpoints.
+- Key UI adjustments for mobile:
+  - Logo and illustration sizes scale down
+  - Forms shrink to fit and align to the top
+  - Dashboard shows tabs to toggle between *Transactions* and *Chart*
+  - Tables and charts resize and become horizontally scrollable
+  - Modals (errors, success) are capped in width and padded for smaller viewports
+  - Buttons are always visible and stacked if needed
+
+No separate mobile build is needed — the web app is touch-friendly and accessible on any phone browser.
+
+---
+
 ## Notes
 
 * Uses `localStorage` to persist login across refreshes

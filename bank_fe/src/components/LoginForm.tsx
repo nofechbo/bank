@@ -72,13 +72,18 @@ export default function LoginForm() {
         >
 
         {/* Left side – illustration */}
-        <ContentBox>
+        <ContentBox className="image-container">
             <Box
-            component="img"
-            src="/assets/images/illustrations/dreamer.svg"
-            alt="Login Illustration"
-            sx={{ width: "100%", maxWidth: 600, maxHeight: 400  }}
+                component="img"
+                src="/assets/images/illustrations/dreamer.svg"
+                alt="Login Illustration"
+                sx={{
+                    maxWidth: { xs: 220, sm: 300, md: 400 },
+                    maxHeight: 280,
+                    mb: { xs: 1.5, sm: 3 },
+                }}
             />
+
         </ContentBox>
 
           {/* Right side – login form */}

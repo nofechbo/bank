@@ -186,9 +186,22 @@ export default function TransferForm() {
             <DialogContent>
               <Typography mb={1}>Your transfer of ${formData.amount} to {formData.toEmail} was successfully submitted.</Typography>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => { resetForm(); setShowSuccess(false); }}>Make Another</Button>
-              <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+            <DialogActions
+                sx={(theme) => ({
+                    px: 3,
+                    pb: 3,
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 2,
+                    [theme.breakpoints.down("sm")]: {
+                        flexDirection: "column",
+                        gap: 1.5,
+                        alignItems: "center",
+                    },
+                })}
+            >
+              <Button variant="outlined" onClick={() => { resetForm(); setShowSuccess(false); }}>Make Another</Button>
+              <Button variant="outlined" onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
             </DialogActions>
           </Dialog>
     </>
