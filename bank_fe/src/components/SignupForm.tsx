@@ -256,7 +256,7 @@ const SignupForm = () => {
                 <Typography variant="body1" sx={{ textAlign: "left", mb: 3 }}>
                     By opening an account at Tuna Bank LTD,
                     I hereby agree to give the honorable cat, 
-                    <strong>Mr. Tuna Avocado Batata Haziza</strong>,
+                    <strong> Mr. Tuna Avocado Batata Haziza</strong>,
                     an unlimited amount of snacks per day,<br />for the rest of my life.
                 </Typography>
 
