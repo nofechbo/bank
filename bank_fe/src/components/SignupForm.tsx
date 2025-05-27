@@ -29,6 +29,7 @@ const SignupForm = () => {
     const { email, setEmail } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isResending, setIsResending] = useState(false);
+    const [termsModalOpen, setTermsModalOpen] = useState(false);
 
     const [formData, setFormData] = useState<SignupFormData>({
         name: '',
@@ -148,8 +149,8 @@ const SignupForm = () => {
                         required
                         margin="dense"
                         inputProps={{
-                        pattern: "^05\\d{8}$",
-                        title: "Phone must start with 05 and be 10 digits",
+                            pattern: "^05\\d{8}$",
+                            title: "Phone must start with 05 and be 10 digits",
                         }}
                     />
                     <TextField
@@ -173,7 +174,27 @@ const SignupForm = () => {
                                   onChange={(e) => setConfirmed(e.target.checked)}
                                 />
                             }
-                            label="I have read and agree to the terms of service."
+                            label={
+                                <span>
+                                  I have read and agree to the{" "}
+                                  <Button
+                                    variant="text"
+                                    size="small"
+                                    sx={{ 
+                                        padding: 0,
+                                        minWidth: "unset",
+                                        textTransform: "none",
+                                        fontSize: "inherit",
+                                        fontWeight: "inherit",
+                                        lineHeight: "inherit",
+                                        verticalAlign: "baseline",
+                                    }}
+                                        onClick={() => setTermsModalOpen(true)}
+                                  >
+                                    terms of service
+                                  </Button>.
+                                </span>
+                              }
                             sx={{ mb: 2 }}
                         />
 
@@ -208,6 +229,43 @@ const SignupForm = () => {
                 </Box>
             </GrowBox>
         </StyledCard>
+
+        <Modal open={termsModalOpen} onClose={() => setTermsModalOpen(false)}>
+            <Box
+                sx={{
+                    bgcolor: "background.paper",
+                    p: 4,
+                    borderRadius: 2,
+                    maxWidth: 500,
+                    width: "90%",
+                    mx: "auto",
+                    mt: "10%",
+                    textAlign: "center",
+                    boxShadow: 6,
+                    outline: "none",
+                }}
+            >
+                <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    gutterBottom
+                    sx={{ textAlign: "left" }}
+                >
+                    Tuna Bank Terms of Service
+                </Typography>
+                <Typography variant="body1" sx={{ textAlign: "left", mb: 3 }}>
+                    By opening an account at Tuna Bank LTD,
+                    I hereby agree to give the honorable cat,
+                    <strong>Mr. Tuna Avocado Batata Haziza</strong>,
+                    an unlimited amount of snacks per day,<br />for the rest of my life.
+                </Typography>
+
+                <Button variant="contained" onClick={() => setTermsModalOpen(false)}>
+                    Understood
+                </Button>
+            </Box>
+        </Modal>
+
       
         {/* Error Modal */}
         <ErrorModal
