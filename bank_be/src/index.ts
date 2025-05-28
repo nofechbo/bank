@@ -17,7 +17,7 @@ app.use(express.json());
 const allowedOrigins = process.env.WHITE_LIST_URLS?.split(",") || [];
 app.use(cors({
   origin: (origin, callback) => {
-    if (origin && allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
