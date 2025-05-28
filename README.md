@@ -4,6 +4,15 @@ This is a secure, full-featured banking web application built with a React front
 
 ---
 
+## Live Demo
+
+Frontend: [https://tunabank.onrender.com](https://tunabank.onrender.com)  
+Backend API: [https://tuna-bank-be.onrender.com](https://tuna-bank-be.onrender.com)  
+Swagger Docs: [https://tuna-bank-be.onrender.com/api-docs](https://tuna-bank-be.onrender.com/api-docs)
+
+
+---
+
 ## 🌐 Overview
 
 | Layer    | Tech Stack                           |

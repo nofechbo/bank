@@ -16,6 +16,18 @@ This is the backend for a secure full-stack banking web application.
 
 ---
 
+## Live Deployment
+
+* Backend is deployed at:  
+  🔗 [https://tuna-bank-be.onrender.com](https://tuna-bank-be.onrender.com)
+
+* Swagger UI (API docs) can be accessed at:  
+  🔗 [https://tuna-bank-be.onrender.com/api-docs](https://tuna-bank-be.onrender.com/api-docs)
+
+> Note: Make sure your frontend base URL is whitelisted in `WHITE_LIST_URLS` and set in `FRONTEND_BASE_URL` in `.env`.
+
+---
+
 ## Project Structure
 
 ```

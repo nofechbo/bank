@@ -14,6 +14,17 @@ This is the frontend for a secure full-stack banking application. It was built w
 
 ---
 
+## Live Deployment
+
+The app is live and can be accessed here:
+
+🔗 [https://tunabank.onrender.com](https://tunabank.onrender.com)
+
+* This is the frontend deployed on Render (Static Site)
+* Connected to the backend via secure REST API
+
+---
+
 ## Project Structure
 
 ```
