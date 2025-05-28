@@ -131,27 +131,6 @@ export default function DashboardPage() {
                             height: { xs: "auto", md: 650 },
                         }}
                     >
-                        <Box
-                            sx={{
-                                display: { xs: "flex", md: "none" }, //only show on mobile
-                                justifyContent: "center",
-                                gap: 2,
-                                mb: 2,
-                            }}
-                            >
-                            <Button
-                                variant={mobileTab === "transactions" ? "contained" : "outlined"}
-                                onClick={() => setMobileTab("transactions")}
-                            >
-                                Transactions
-                            </Button>
-                            <Button
-                                variant={mobileTab === "chart" ? "contained" : "outlined"}
-                                onClick={() => setMobileTab("chart")}
-                            >
-                                Chart
-                            </Button>
-                        </Box>
 
                         {/* Left (2/3 width / Full Width on Mobile) */}
                         <Box
@@ -174,6 +153,31 @@ export default function DashboardPage() {
                             {!isDesktop && (
                                 <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={handleLogout} />
                             )}
+
+                            {!isDesktop && (
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        gap: 2,
+                                        mt: 1,
+                                    }}
+                                >
+                                    <Button
+                                        variant={mobileTab === "transactions" ? "contained" : "outlined"}
+                                        onClick={() => setMobileTab("transactions")}
+                                    >
+                                        Transactions
+                                    </Button>
+                                    <Button
+                                        variant={mobileTab === "chart" ? "contained" : "outlined"}
+                                        onClick={() => setMobileTab("chart")}
+                                    >
+                                        Chart
+                                    </Button>
+                                </Box>
+                            )}
+
 
                             {/* Only show Transactions on mobile when selected */}
                             {(mobileTab === "transactions" || isDesktop) && (
