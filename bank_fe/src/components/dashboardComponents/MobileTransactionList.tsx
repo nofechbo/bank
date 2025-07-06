@@ -17,35 +17,35 @@ export default function MobileTransactionList({ transactions }: Props) {
             const amount = `${isReceived ? "+" : "-"}$${Math.abs(Number(tx.amount))}`;
 
             return (
-            <Card
-                key={tx.id}
-                sx={{
-                px: 2,
-                py: 2,
-                backgroundColor: "background.paper",
-                borderRadius: 2,
-                boxShadow: 4,
-                }}
-            >
-                <Typography
-                    fontWeight="bold"
-                    gutterBottom
-                    sx={{ color: isReceived ? "green" : "red" }}
+                <Card
+                    key={tx.id}
+                    sx={{
+                        px: 2,
+                        py: 2,
+                        backgroundColor: "background.paper",
+                        borderRadius: 2,
+                        boxShadow: 4,
+                    }}
                 >
-                    {amount}
-                </Typography>
+                    <Typography
+                        fontWeight="bold"
+                        gutterBottom
+                        sx={{ color: isReceived ? "green" : "red" }}
+                    >
+                        {amount}
+                    </Typography>
 
-                <Typography fontSize="14px" color="text.secondary">
-                {new Date(tx.date).toLocaleString(undefined, {
-                    dateStyle: "short",
-                    timeStyle: "short"
-                })}
-                </Typography>
+                    <Typography fontSize="14px" color="text.secondary">
+                        {new Date(tx.date).toLocaleString(undefined, {
+                            dateStyle: "short",
+                            timeStyle: "short"
+                        })}
+                    </Typography>
 
-                <Typography fontSize="14px" color="text.secondary">
-                {tx.type} | {tx.email}
-                </Typography>
-            </Card>
+                    <Typography fontSize="14px" color="text.secondary">
+                        {tx.type} | {tx.email}
+                    </Typography>
+                </Card>
             );
         })}
     </Box>
