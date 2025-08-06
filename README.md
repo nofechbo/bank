@@ -74,6 +74,37 @@ Each app (backend and frontend) has its own README with setup steps, including:
 
 ---
 
+## 🐳 Docker Setup
+
+The app can be fully containerized using Docker Compose.
+
+### 🔧 To run in development:
+
+    docker compose up --build
+
+Make sure to use:
+
+- Dockerfile.dev for both frontend and backend
+- Port mappings: 5173 for frontend, 3000 for backend
+
+### 🚀 To run in production:
+
+1. Switch Compose file to use Dockerfile.prod for both services  
+2. For frontend, expose port 80 instead of 5173  
+3. Prisma runs via:
+   - npx prisma migrate dev in dev mode
+   - npx prisma migrate deploy in prod mode
+
+### 📦 Services included:
+
+- Frontend: React app (served via Vite in dev, Nginx in prod)
+- Backend: Express API with WebSocket + Prisma
+- Database: PostgreSQL with persistent volume
+
+See comments in docker-compose.yml for mode-specific settings.
+
+---
+
 ## 👨‍💻 Author
 
 Built by **Nofech Ben-Or**
