@@ -1,0 +1,17 @@
+### bank_be - prod
+# 1. Base image for building
+FROM node:20 as builder
+
+# 2. Set working directory
+WORKDIR /app
+
+# 3. Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# 4. Copy source code and build
+COPY . .
+
+# 5. Build and run
+CMD ["npm", "start"]
+

@@ -1,0 +1,49 @@
+services:
+  frontend:
+    build:
+      context: ./bank_fe
+      dockerfile: Dockerfile.dev  # prod: Dockerfile.prod
+    ports:
+      - "5173:5173"  # dev
+      # - "80:80"    # prod
+    restart: unless-stopped
+    depends_on: 
+      - backend
+    env_file: ./bank_fe/.env
+
+  backend:
+    build:
+      context: ./bank_be
+      dockerfile: Dockerfile.dev  # prod: Dockerfile.prod
+    command: sh -c "npx prisma migrate dev && npm run dev" # prod: sh -c "npx prisma migrate deploy && npm start"
+    ports: 
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    env_file: ./bank_be/.env
+    depends_on: 
+        db:
+          condition: service_healthy
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "tuna_bank", "-d", "mybankdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_USER: tuna_bank
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: mybankdb
+    volumes: 
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

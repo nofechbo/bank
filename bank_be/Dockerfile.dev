@@ -1,0 +1,16 @@
+### bank_be - dev mode
+#1. use base image
+FROM node:20
+
+#2.set working directory
+WORKDIR /app
+
+#3. copy package + install
+COPY package*.json ./
+RUN npm install
+
+#4. copy app code
+COPY . .
+
+#5. start app
+CMD ["npm", "run", "dev"]

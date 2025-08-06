@@ -7,6 +7,7 @@ import { startPeriodicCleanUp } from './db/dbPeriodicCleanup.js';
 import cors from 'cors';
 import http from 'http';
 import { setupWebSocketServer } from './websockets/websocketServer.js';
+import healthcheckRouter from './routes/healthcheck.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3030;
@@ -29,6 +30,7 @@ setupSwagger(app); //mounts swagger docs at /api-docs
 
 app.use('/auth', userAuthRouter); //signup, login, verifyCode, logout
 app.use('/dashboard', dashboardRouter); //balance, transfer
+app.use(healthcheckRouter); //for docker
 
 const server = http.createServer(app);
 
