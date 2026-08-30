@@ -1,126 +1,144 @@
 # Banking App Frontend
 
-This is the frontend for a secure full-stack banking application. It was built with **React**, **TypeScript**, **Vite**, and **Material UI**.
+Frontend application for a full-stack banking platform, built with React, TypeScript, Vite, and Material UI.
+
+The interface supports authentication, email verification, account balances, transaction history, fund transfers, and real-time dashboard updates from the backend.
 
 ## Features
 
-* Modern login and signup with email verification
-* JWT-based authentication with token persistence
-* Dashboard with user info, balance, recent transactions
-* Transfer funds between users
-* Real-time balance and transaction updates via WebSocket
-* Full error handling and UI feedback (loading, modals)
-* Responsive, clean UI using the [Matx design system](https://ui-lib.com/downloads/matx-free-react-admin-template/)
+* User signup and login
+* Email-verification flow
+* JWT-based authentication with session persistence
+* Account balance and recent-transaction dashboard
+* Fund transfers between users
+* Real-time dashboard refresh through WebSockets
+* Loading, success, and error feedback
+* Protected application routes
+* Responsive desktop and mobile layouts
+* Material UI / Matx-based component design
 
----
+## Live deployment
 
-## Live Deployment
+**Frontend:**
+https://tunabank.onrender.com
 
-The app is live and can be accessed here:
+The deployed frontend communicates with the corresponding backend REST API and WebSocket server.
 
-🔗 [https://tunabank.onrender.com](https://tunabank.onrender.com)
+## Project structure
 
-* This is the frontend deployed on Render (Static Site)
-* Connected to the backend via secure REST API
-
----
-
-## Project Structure
-
-```
-.
+```text
+bank_fe/
 ├── public/                         # Static assets
-├── src/                 
-│   ├── App.tsx                     # Main app and routes
-│   ├── main.tsx                    # Entry point
-│   ├── config.ts                   # Centralized env config
-│   ├── contexts/                   # React Context (Auth)
-│   ├── components/                 # Reusable components (forms, modals, UI blocks)
-|   │   ├── dashboardComponents/    # Dashboard UI blocks + WebSocket hook
-│   ├── pages/                      # Route-level views (Dashboard, Signup, Login, etc.)
+├── src/
+│   ├── App.tsx                     # Main application and routes
+│   ├── main.tsx                    # Application entry point
+│   ├── config.ts                   # Environment-based configuration
+│   ├── contexts/                   # React contexts
+│   ├── components/
+│   │   └── dashboardComponents/    # Dashboard UI and WebSocket logic
+│   ├── pages/                      # Login, signup, dashboard, transfer, etc.
 │   ├── styles/                     # Shared styling and layout helpers
 │   ├── types/                      # Shared TypeScript types
-│   └── vite-env.d.ts               # Vite globals
+│   └── vite-env.d.ts
 ├── index.html
-├── vite.config.ts        # Vite config
-├── tsconfig*.json        # TypeScript config
+├── vite.config.ts
+├── tsconfig*.json
 ├── eslint.config.js
-└── .env.example          # Env variable example file
+└── .env.example
 ```
 
----
+## Environment variables
 
-## Environment Variables
+Copy the example file:
 
-All environment variables are defined in `.env.example`. Copy it as `.env` and fill in your backend URL:
-
+```bash
+cp .env.example .env
 ```
+
+Configure the backend URL:
+
+```dotenv
 VITE_API_URL=http://localhost:3030
 ```
 
-This value is used in `src/config.ts` to construct API requests. Change it to your deployment address when deploying.
+`src/config.ts` uses this value when constructing API requests.
 
----
+## Running locally
 
-## Setup & Development
-
-1. **Install dependencies**:
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-2. **Start the dev server**:
+### Start the development server
 
 ```bash
 npm run dev -- --host=0.0.0.0
 ```
 
-* Visit the app at: [http://localhost:5173](http://localhost:5173)
-* `--host=0.0.0.0` allows testing on other devices on your local network
+Open:
 
----
+http://localhost:5173
 
-## Production Build
+Using `--host=0.0.0.0` also makes the development server reachable from other devices on the local network.
+
+## Production build
 
 ```bash
 npm run build
 ```
 
-The built files will be in `/dist`. You can deploy them using any static server or integrate with the backend server to serve as static assets.
+The optimized application is generated in `dist/`.
 
----
+It can be deployed through a static hosting service or served through a web server such as Nginx.
 
-## 📱 Mobile Responsiveness
+## Authentication flow
 
-The UI is fully responsive and optimized for mobile screens:
-The UI is fully responsive and optimized for mobile screens:
+Authentication state is managed through React Context and persisted using `localStorage`.
 
-- All core pages (Signup, Login, Dashboard, Transfer) scale and align properly on small devices.
-- Navigation and layout adapt dynamically using Material UI breakpoints.
-- Key UI adjustments for mobile:
-  - Logo and illustration sizes scale down
-  - Forms shrink to fit and align to the top
-  - Dashboard shows tabs to toggle between *Transactions* and *Chart*
-  - Tables and charts resize and become horizontally scrollable
-  - Modals (errors, success) are capped in width and padded for smaller viewports
-  - Buttons are always visible and stacked if needed
+Protected areas of the application are wrapped by `ProtectedRoutes`, preventing unauthenticated users from accessing pages such as the dashboard and transfer interface.
 
-No separate mobile build is needed — the web app is touch-friendly and accessible on any phone browser.
+## Real-time updates
 
----
+The dashboard uses a WebSocket connection to receive update notifications from the backend.
 
-## Notes
+After a successful transfer, the backend can emit a `dashboard:update` event to affected users. The frontend reacts by refreshing account and transaction data.
 
-* Uses `localStorage` to persist login across refreshes
-* Authentication state is managed by a React Context (`AuthContext`)
-* All sensitive routes are protected using a `ProtectedRoutes` wrapper
-* WebSocket connection is handled by a custom hook (useDashboardSocket) in the dashboard. It listens for dashboard:update messages and triggers a data refresh.
-* `/dashboard`, `/transfer`, and `/verify` are fully functional
-* `.env` is **not committed to git** — instead, `.env.example` is provided
+## Responsive design
 
----
+The application is designed to work across desktop and mobile screen sizes.
+
+Responsive behavior includes:
+
+* Adaptive form and page layouts
+* Scaled illustrations and branding
+* Mobile-friendly dashboard navigation
+* Scrollable tables and charts where required
+* Responsive modal widths and spacing
+* Touch-friendly controls
+* Stacked actions on narrow screens
+
+No separate mobile build is required.
+
+## Technology stack
+
+| Area                 | Technologies               |
+| -------------------- | -------------------------- |
+| Framework            | React                      |
+| Language             | TypeScript                 |
+| Build tooling        | Vite                       |
+| UI                   | Material UI, Matx          |
+| Authentication state | React Context              |
+| Real-time updates    | WebSockets                 |
+| Styling              | MUI and application styles |
+
+## Related backend
+
+The Express backend is located in [`../bank_be`](../bank_be).
+
+For the overall application architecture and Docker setup, see the [root README](../README.md).
 
 ## Author
 
-Nofech Ben-Or
+Built by **Nofech Ben-Or**.
