@@ -16,9 +16,11 @@ import LoadingButton from "@mui/lab/LoadingButton";
     showResend?: boolean;
     onResend?: () => void;
     loading?: boolean;
+    actionLabel?: string;
+    onAction?: () => void;
  }
 
- export default function ErrorModal({open, title, message, onClose, showResend, onResend, loading}: Props) {
+ export default function ErrorModal({open, title, message, onClose, showResend, onResend, loading, actionLabel, onAction}: Props) {
     const navigate = useNavigate();
 
     return (
@@ -44,14 +46,17 @@ import LoadingButton from "@mui/lab/LoadingButton";
                     {message}
                 </Typography>
 
-                <Box display="flex" justifyContent="center" gap={2} mt={4} flexWrap="wrap">
+                <Box mt={4} display="flex" flexDirection="column" alignItems="center" gap={2}>
+                    <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap">
+                    {actionLabel && onAction && (
                     <Button
-                        variant="outlined"
+                        variant="contained"
                         color="primary"
-                        onClick={() => navigate("/")}
+                        onClick={onAction}
                     >
-                        Return to Homepage
+                        {actionLabel}
                     </Button>
+                    )}
                     
                     <Button 
                         variant="contained"
@@ -59,6 +64,20 @@ import LoadingButton from "@mui/lab/LoadingButton";
                         onClick={onClose} 
                     >
                         Close
+                    </Button>
+                    </Box>
+
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => navigate("/")}
+                        sx={{
+                            bgcolor: "#3a5875",
+                            color: "#ffffff",
+                            "&:hover": { bgcolor: "#2c465d" },
+                        }}
+                    >
+                        Return to Homepage
                     </Button>
 
                     {showResend && onResend && (
@@ -68,7 +87,6 @@ import LoadingButton from "@mui/lab/LoadingButton";
                         onClick={onResend}
                         loading={loading}
                         disabled={!onResend}
-                        sx={{ mt: 2 }}
                     >
                         Resend verification email
                     </LoadingButton>

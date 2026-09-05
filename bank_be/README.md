@@ -4,6 +4,20 @@ Backend service for a full-stack banking application, built with Node.js, Expres
 
 It handles authentication, email verification, account balances, fund transfers, transaction history, WebSocket updates, cleanup tasks, and API documentation.
 
+## Technical architecture
+
+```mermaid
+flowchart LR
+    UI[React + Vite frontend] -->|HTTP / JWT| API[Express + TypeScript API]
+    UI <-->|WebSocket updates| API
+    API --> Auth[Authentication and account services]
+    API --> Chat[Support-chat safeguards + LLM adapter]
+    Auth --> DB[(PostgreSQL + Prisma)]
+    Chat --> Router[OpenRouter free model / OpenAI fallback]
+    API --> Mail[Gmail SMTP]
+    API --> Docs[Swagger / OpenAPI]
+```
+
 ## Features
 
 * User signup with email verification
@@ -150,10 +164,23 @@ Important values include:
 * `GMAIL_ADDRESS`
 * `GMAIL_APP_PASSWORD`
 * `DATABASE_URL`
+* `OPENROUTER_API_KEY` (recommended for the learning-project free-model route) or `OPENAI_API_KEY` (server-side only; required to enable support chat)
 
 `WHITE_LIST_URLS` should contain the frontend origins allowed to access the backend.
 
 `FRONTEND_BASE_URL` is used when generating verification links sent by email.
+
+## AI support chat
+
+Anyone can use `POST /support/chat`; the endpoint does not inspect login tokens or account data. It has a small, versioned TunaBank knowledge source at `src/knowledge/tunabank.ts`; update that reviewed file when product facts change. This is preferable to reading a live Google Doc on every request: it avoids external availability, unreviewed-content, and prompt-injection risks.
+
+For this learning project, create an OpenRouter key and set `OPENROUTER_API_KEY` to use `openrouter/free`. The existing OpenAI SDK is pointed at OpenRouter's compatible API endpoint, so no additional package is needed. If no OpenRouter key is set, the service falls back to `OPENAI_API_KEY`.
+
+### Abuse prevention and privacy design
+
+The public chat endpoint uses scope and prompt-injection checks, bounded input/history/output, and a 10-request-per-minute per-IP burst limit. It keeps chat history only in the browser session; the backend logs metadata, never message text or secrets. Account data is never sent to the model, and prompt-like model output is discarded. Configure `CHAT_REQUESTS_PER_MINUTE` in `.env` if needed.
+
+For defense in depth, keep the API key only in the backend environment and add a shared Redis or edge rate limiter before running more than one backend instance. The current rate limiter is intentionally lightweight and per instance, matching Pingwe.
 
 ## Technology stack
 

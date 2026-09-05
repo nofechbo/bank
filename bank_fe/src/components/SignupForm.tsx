@@ -279,7 +279,7 @@ const SignupForm = () => {
             }
             message={
                 duplicateEmail
-                  ? "This email is already in the system."
+                  ? "An account with this email already exists. You can log in instead."
                   : duplicatePhone
                   ? "This phone number is already in the system."
                   : errorMessage
@@ -288,7 +288,17 @@ const SignupForm = () => {
                 setErrorMessage("");
                 setDuplicateEmail(false);
                 setDuplicatePhone(false);
+                setUnverifiedUser(false);
             }}
+
+            actionLabel={duplicateEmail ? "Go to login" : undefined}
+            onAction={duplicateEmail ? () => {
+                setErrorMessage("");
+                setDuplicateEmail(false);
+                setDuplicatePhone(false);
+                setUnverifiedUser(false);
+                navigate("/login");
+            } : undefined}
 
             showResend={unverifiedUser}
             onResend={() => handleResendLink(email!, setIsResending)}

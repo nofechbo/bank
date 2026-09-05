@@ -6,5 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     open: false, // prevents auto-opening browser
+    host: "0.0.0.0", // allow devices on the same local network to reach Vite
   }
 });

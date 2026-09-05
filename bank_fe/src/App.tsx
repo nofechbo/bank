@@ -1,5 +1,6 @@
 import AppRoutes from './components/Routes';
 import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
+import { SupportChat } from './components/SupportChat';
 
 const theme = createTheme({
   components: {
@@ -25,6 +26,7 @@ function App() {
     <ThemeProvider theme={theme}>
         <CssBaseline />
         <AppRoutes />
+        <SupportChat />
     </ThemeProvider>
   );
 }

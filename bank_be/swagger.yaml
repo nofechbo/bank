@@ -162,6 +162,32 @@ paths:
         '400':
           description: Invalid email or insufficient funds
 
+  /support/chat:
+    post:
+      summary: Ask the public TunaBank support assistant a question
+      description: The assistant provides guidance only and cannot access accounts or perform banking actions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  maxLength: 1500
+      responses:
+        '200':
+          description: Support response
+        '400':
+          description: Invalid, unsafe, or out-of-scope message
+        '429':
+          description: Too many chat requests
+        '503':
+          description: Chat is not configured
+
 components:
   securitySchemes:
     bearerAuth:

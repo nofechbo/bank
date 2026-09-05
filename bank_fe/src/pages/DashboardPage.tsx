@@ -26,7 +26,7 @@ export default function DashboardPage() {
     const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
 
-    const { token, email } = useAuth();
+    const { token, email, logout } = useAuth();
     
     const fetchDashboard = useCallback(async () => {
         try {
@@ -71,27 +71,6 @@ export default function DashboardPage() {
         userEmail: email ?? null,
         onUpdate: fetchDashboard,
     });
-    
-    const handleLogout = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-               navigate("/", { replace: true });
-            } else {
-                const data: { error? : string } = await response.json();
-                throw new Error(data.error || "Verification failed")
-            }
-        } catch (err) {
-            console.error(err);
-            setErrorMessage(err instanceof Error ? err.message : "System encountered a problem logging out");
-        } 
-    }
     
     return (
         <Box sx={PageBox}>
@@ -151,7 +130,7 @@ export default function DashboardPage() {
                             />
 
                             {!isDesktop && (
-                                <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={handleLogout} />
+                                <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={() => { void logout(); }} />
                             )}
 
                             {!isDesktop && (
@@ -188,7 +167,7 @@ export default function DashboardPage() {
                         {/* Right (1/3 width) */}
                         <Box sx={{ flex: 1, display: "flex", flexDirection: "column", height: "auto", mt: { xs: 4, md: 0 }, }}>
                         {isDesktop && (
-                            <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={handleLogout} />
+                            <ActionButtons onTransfer={() => navigate("/transfer")} onLogout={() => { void logout(); }} />
                         )}
                             
                             {/*chart*/}
