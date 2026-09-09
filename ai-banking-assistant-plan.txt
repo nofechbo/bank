@@ -1,6 +1,44 @@
 TUNABANK AI BANKING ASSISTANT — AGREED PLAN
 Date: 2026-09-08
-Status: Steps 1 and 2 implemented. Continue one step at a time when requested.
+Status: Steps 1, 2 and 3 implemented. Continue one step at a time when requested.
+
+STEP 3 COMPLETION NOTES (2026-09-09)
+- Added @langchain/langgraph and connected POST /assistant/chat to the workflow.
+  Valid requests now return 200 with { reply }; provider/workflow failure returns
+  503, overall turn cancellation/deadline returns 504, and quota/busy returns 429
+  with Retry-After. JWT, account lookup and request validation remain in place.
+- Graph: plan -> lookup or respond -> end. The model returns one validated
+  routeBankingRequest decision. There are no loops: at most one model invocation
+  and one read-only banking tool invocation per turn.
+- Routes cover balance, recent transactions, a specified transaction, date-range
+  summaries, general banking/app support, clarification, transfer guidance and
+  out-of-scope refusal. Missing dates/IDs/transfer details trigger clarification.
+- Fresh account facts are rendered directly from tool results, including exact
+  decimal amounts. Model-generated numbers and old browser answers are not used
+  as account facts. General support/clarification text has output filtering.
+- Bounded history is sent as explicitly untrusted context in a user message,
+  never reconstructed as trusted assistant/tool messages. Short follow-ups such
+  as "100" retain context. No transcript persistence or checkpoint DB added.
+- Summary date boundaries are explicit UTC; relative dates use server UTC time.
+- Transfer guidance asks for amount/email and directs the user to review/submit
+  on the existing Transfer page. It does not verify a recipient or move money.
+  Structured drafts and form-prefilling remain step 5.
+- Added an explicit cheap filter for obvious unrelated generation tasks, plus
+  model-level contextual scope instructions. Filters cannot eliminate every
+  unrelated request; server-enforced quotas still bound provider consumption.
+- Limits are constants: 45-second overall turn deadline, existing 30-second
+  provider deadline, one active turn per account and four per backend process.
+  Failed calls stay charged. Pending operations retain their concurrency slot
+  until settled even when the HTTP response times out; no later tool runs after
+  cancellation. All account access stays in user-scoped read-only tools.
+- npm test: 34 tests passed. Live free-router checks passed for synthetic balance
+  retrieval and the short transfer follow-up. Explicit off-topic rejection is
+  covered by deterministic local tests after observing inconsistent live routing.
+- Manual workflow check: node tests/manual/check-assistant-workflow.mjs after
+  building, from bank_be. It uses synthetic data and makes live provider calls;
+  it is excluded from npm test. No real account data is sent by this check.
+- Existing regular chat, its OpenAI fallback, frontend, and transfer execution
+  were not changed by this step. Step 4 will connect the authenticated chat UI.
 
 STEP 2 COMPLETION NOTES (2026-09-09)
 - Added @langchain/core, @langchain/openrouter, and Zod dependencies.

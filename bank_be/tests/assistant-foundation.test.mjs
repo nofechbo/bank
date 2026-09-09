@@ -12,6 +12,9 @@ import { DEFAULT_CHAT_REQUESTS_PER_MINUTE as IP_LIMIT, CHAT_USER_REQUESTS_PER_MI
 const originalFindToken = dbInstance.revokedToken.findUnique;
 const originalFindUser = dbInstance.user.findFirst;
 process.env.JWT_SECRET = 'assistant-foundation-test-secret';
+// The workflow now runs on valid requests; this suite deliberately tests its
+// unconfigured-provider response without making live model calls.
+delete process.env.OPENROUTER_API_KEY;
 
 after(async () => {
   dbInstance.revokedToken.findUnique = originalFindToken;
@@ -106,7 +109,7 @@ test('verified JWT alone determines account; body identities are ignored', async
   await chatWithAssistant(req, res);
   assert.deepEqual(lookup, { where: { email: 'a@example.test', isVerified: true }, select: { id: true } });
   assert.equal(res.statusCode, 503);
-  assert.equal(res.body.code, 'ASSISTANT_NOT_READY');
+  assert.equal(res.body.code, 'ASSISTANT_UNAVAILABLE');
   assert.equal(res.headers['Cache-Control'], 'no-store');
   assert.deepEqual(ownedTransactionWhere({ id: 'account-a' }), { OR: [{ fromUserId: 'account-a' }, { toUserId: 'account-a' }] });
 });

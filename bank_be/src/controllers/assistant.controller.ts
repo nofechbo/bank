@@ -35,6 +35,13 @@ export async function chatWithAssistant(req: AuthenticatedRequest, res: Response
     return;
   }
   
-  // Body identity fields are never passed to the service.
-  res.status(503).json(await assistantChat(account));
+  // Body identity fields are never passed to the service; history is only context.
+  try {
+    const result = await assistantChat(account, message, validation.history);
+    res.status("reply" in result ? 200 : result.code === ASSISTANT_ERROR_CODES.TIMEOUT ? 504 : 503).json(result);
+  } catch (error) {
+    if (!(error instanceof ChatLimitError)) throw error;
+    res.setHeader("Retry-After", error.retryAfter);
+    res.status(429).json({ code: ASSISTANT_ERROR_CODES.CHAT_LIMIT, error: error.message });
+  }
 }
