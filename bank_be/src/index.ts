@@ -9,6 +9,7 @@ import http from 'http';
 import { setupWebSocketServer } from './websockets/websocketServer.js';
 import healthcheckRouter from './routes/healthcheck.routes.js';
 import chatRouter from './routes/chat.routes.js';
+import assistantRouter from './routes/assistant.routes.js';
 import { logError, logInfo } from './utils/logger.js';
 
 const app = express();
@@ -35,6 +36,7 @@ setupSwagger(app); //mounts swagger docs at /api-docs
 app.use('/auth', userAuthRouter); //signup, login, verifyCode, logout
 app.use('/dashboard', dashboardRouter); //balance, transfer
 app.use('/support', chatRouter);
+app.use('/assistant', assistantRouter);
 app.use(healthcheckRouter); //for docker
 
 // A final safety net for errors thrown by any route or middleware. Route bodies

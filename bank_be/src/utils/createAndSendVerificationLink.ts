@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { DbUser } from '../db/prisma';
+import type { DbUser } from '../db/prisma.js';
 import { sendVerificationEmail } from "./sendVerificationEmail.js";
 
 const localLink = `${process.env.FRONTEND_BASE_URL}/verify?token=`; 

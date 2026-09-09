@@ -13,12 +13,7 @@ import {
   TUNA_ONLY_PATTERN,
 } from "./chat.consts.js";
 import { logInfo } from "../logger.js";
-
-export type ChatHistoryMessage = { role: "user" | "assistant"; text: string };
-
-type ChatRequestValidation =
-  | { valid: true; history: ChatHistoryMessage[] }
-  | { valid: false; reason: string; error: string };
+import type { ChatHistoryMessage, ChatRequestValidation } from "../../types/chat.types.js";
 
 function parseHistory(value: unknown): ChatHistoryMessage[] | null {
   if (value === undefined) return [];

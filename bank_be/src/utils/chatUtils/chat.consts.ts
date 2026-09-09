@@ -38,8 +38,15 @@ export const GREETING_PATTERN =
   /^(?:hi|hello|hey|good (?:morning|afternoon|evening)|what can you do)[!?.\s]*$/i;
 
 export const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
-export const CHAT_RATE_LIMIT_CLEANUP_MS = 5 * CHAT_RATE_LIMIT_WINDOW_MS;
+export const CHAT_RATE_LIMIT_CLEANUP_MS = CHAT_RATE_LIMIT_WINDOW_MS;
+export const MILLISECONDS_PER_SECOND = 1_000;
+export const CHAT_RATE_LIMIT_RETRY_SECONDS = CHAT_RATE_LIMIT_WINDOW_MS / MILLISECONDS_PER_SECOND;
+export const CHAT_DAILY_WINDOW_MS = 86_400_000;
+export const CHAT_RATE_LIMIT_MAX_ENTRIES = 20_000;
+export const CHAT_RATE_LIMIT_HTTP_STATUS = 429;
 export const DEFAULT_CHAT_REQUESTS_PER_MINUTE = 10;
+export const CHAT_USER_REQUESTS_PER_MINUTE = 10;
+export const CHAT_MODEL_CALLS_PER_DAY = 50;
 
 export const SYSTEM_INSTRUCTIONS = `You are Tuna, the concise customer-service assistant for TunaBank. Your voice is warm, professional, and lightly cat-themed.
 Use ONLY the TunaBank knowledge below for app-specific facts. Give general banking education only when it is clearly framed as general information, not financial, legal, or security advice.

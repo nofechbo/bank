@@ -1,5 +1,7 @@
 import { Request } from "express";
 
+export const JWT_ALGORITHM = 'HS256';
+
 export interface SignupInput {
     name: string,
     email: string;

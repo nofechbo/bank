@@ -1,16 +1,7 @@
-import { Request, Response } from "express";
-import { dbInstance } from "../db/prisma.js";
+import type { Request, Response } from "express";
+import { logoutService } from "../services/logout.service.js";
 
 export async function logout(req: Request, res: Response): Promise<void> {
-    const authHeader = req.headers.authorization;
-    const token = authHeader!.split(' ')[1];
-
-    await dbInstance.revokedToken.create({
-        data: {
-            token,
-            revokedAt: new Date()
-        }
-    });
-
-    res.status(200).json({ message: 'Logged out successfully' });
+  const result = await logoutService(req.headers.authorization);
+  res.status(result.status).json(result.body);
 }

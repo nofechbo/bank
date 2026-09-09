@@ -4,20 +4,6 @@ Backend service for a full-stack banking application, built with Node.js, Expres
 
 It handles authentication, email verification, account balances, fund transfers, transaction history, WebSocket updates, cleanup tasks, and API documentation.
 
-## Technical architecture
-
-```mermaid
-flowchart LR
-    UI[React + Vite frontend] -->|HTTP / JWT| API[Express + TypeScript API]
-    UI <-->|WebSocket updates| API
-    API --> Auth[Authentication and account services]
-    API --> Chat[Support-chat safeguards + LLM adapter]
-    Auth --> DB[(PostgreSQL + Prisma)]
-    Chat --> Router[OpenRouter free model / OpenAI fallback]
-    API --> Mail[Gmail SMTP]
-    API --> Docs[Swagger / OpenAPI]
-```
-
 ## Features
 
 * User signup with email verification

@@ -23,6 +23,22 @@ Swagger Docs: [https://tuna-bank-be.onrender.com/api-docs](https://tuna-bank-be.
 
 ---
 
+## Technical architecture
+
+```mermaid
+flowchart LR
+    UI[React + Vite frontend] -->|HTTP / JWT| API[Express + TypeScript API]
+    UI <-->|WebSocket updates| API
+    API --> Auth[Authentication and account services]
+    API --> Chat[Support-chat safeguards + LLM adapter]
+    Auth --> DB[(PostgreSQL + Prisma)]
+    Chat --> Router[OpenRouter free model / OpenAI fallback]
+    API --> Mail[Gmail SMTP]
+    API --> Docs[Swagger / OpenAPI]
+```
+
+---
+
 ## 🔒 Features
 
 - User registration and login with real email verification

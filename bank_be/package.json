@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "build": "tsc",
     "start": "npm run build && node dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts"
@@ -32,6 +32,8 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@langchain/core": "^1.2.9",
+    "@langchain/openrouter": "^0.4.11",
     "@prisma/client": "^6.8.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
@@ -42,6 +44,7 @@
     "openai": "^7.10.0",
     "swagger-ui-express": "^5.0.1",
     "ws": "^8.18.2",
-    "yamljs": "^0.3.0"
+    "yamljs": "^0.3.0",
+    "zod": "^4.5.4"
   }
 }
