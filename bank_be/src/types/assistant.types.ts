@@ -3,6 +3,9 @@ import type { assistantRouteSchema } from "../utils/assistantUtils/assistant.hel
 
 export type AssistantRoute = z.infer<typeof assistantRouteSchema>;
 
+/** Where in the per-turn graph a failure happened, for logs only. */
+export type AssistantStage = "plan" | "lookup" | "respond";
+
 /** Constructed server-side after JWT verification and account lookup. */
 export type AssistantAccount = Readonly<{ id: string }>;
 

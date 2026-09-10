@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   IconButton,
   Paper,
@@ -14,51 +15,53 @@ import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import CloseIcon from "@mui/icons-material/Close";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SendIcon from "@mui/icons-material/Send";
-import { API_BASE_URL } from "../config";
+import {
+  ASSISTANT_INVITE_DISPLAY_MS,
+  ASSISTANT_INVITE_TEXT,
+  ASSISTANT_SUGGESTIONS,
+  CHAT_MODE_THEME,
+  MAX_INPUT_CHARS,
+  SESSION_EXPIRED_NOTICE,
+  rateLimitNotice,
+} from "./chatComponents/chat.consts";
+import {
+  assistantInviteKey,
+  markAssistantInviteShown,
+  wasAssistantInviteShown,
+} from "./chatComponents/chat.helpers";
+import { useChatSession } from "./chatComponents/useChatSession";
 
-type Message = { role: "user" | "assistant"; text: string };
-const CHAT_SESSION_STORAGE_KEY = "tunabank-support-chat";
-const MAX_HISTORY_MESSAGES = 6;
-const INITIAL_CHAT_MESSAGE_TEXT =
-  "Hi, I’m Tuna. I can explain how to use TunaBank and provide general banking information. I can’t access or change your account.";
-
-const initialMessage: Message = {
-  role: "assistant",
-  text: INITIAL_CHAT_MESSAGE_TEXT,
-};
-
-function getSessionMessages(): Message[] {
-  try {
-    const saved = sessionStorage.getItem(CHAT_SESSION_STORAGE_KEY);
-    if (!saved) return [initialMessage];
-    const parsed: unknown = JSON.parse(saved);
-    if (!Array.isArray(parsed) || parsed.length === 0) return [initialMessage];
-    const messages = parsed.filter(
-      (item): item is Message =>
-        typeof item === "object" &&
-        item !== null &&
-        ((item as Message).role === "user" ||
-          (item as Message).role === "assistant") &&
-        typeof (item as Message).text === "string",
-    );
-    return messages.length ? messages : [initialMessage];
-  } catch {
-    return [initialMessage];
-  }
-}
-
+/** One floating chat with two authentication-dependent modes: public TunaBank support, and the authenticated banking assistant. **/
 export function SupportChat() {
   const isMobile = useMediaQuery("(max-width: 599.95px)");
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>(getSessionMessages);
-  const [sending, setSending] = useState(false);
   const [showNewChatLabel, setShowNewChatLabel] = useState(false);
+  const [inviteVisible, setInviteVisible] = useState(false);
   const [visualViewport, setVisualViewport] = useState<{
     height: number;
     offsetTop: number;
   } | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inviteKeyRef = useRef<string | null>(null);
+
+  const {
+    mode,
+    email,
+    initialized,
+    messages,
+    input,
+    setInput,
+    sending,
+    send,
+    startNewChat,
+    canSend,
+    inputDisabled,
+    rateLimited,
+    retrySeconds,
+    sessionExpired,
+  } = useChatSession();
+  const theme = CHAT_MODE_THEME[mode];
+  const showSuggestions = mode === "assistant";
 
   // Track the visual viewport so the complete chat stays usable when the keyboard opens.
   useEffect(() => {
@@ -81,17 +84,34 @@ export function SupportChat() {
     };
   }, [isMobile, open]);
 
-  // Keep the conversation for this browser tab/session only.
   useEffect(() => {
-    try {
-      sessionStorage.setItem(
-        CHAT_SESSION_STORAGE_KEY,
-        JSON.stringify(messages),
-      );
-    } catch {
-      // Chat still works when browser storage is unavailable.
+    if (!initialized || mode !== "assistant" || !email) {
+      setInviteVisible(false);
+      return;
     }
-  }, [messages]);
+    const inviteKey = assistantInviteKey(email);
+    inviteKeyRef.current = inviteKey;
+    if (open) {
+      markAssistantInviteShown(inviteKey);
+      setInviteVisible(false);
+      return;
+    }
+    if (wasAssistantInviteShown(inviteKey)) {
+      setInviteVisible(false);
+      return;
+    }
+    setInviteVisible(true);
+    const timer = setTimeout(() => {
+      markAssistantInviteShown(inviteKey);
+      setInviteVisible(false);
+    }, ASSISTANT_INVITE_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [email, initialized, mode, open]);
+
+  const dismissInvite = () => {
+    if (inviteKeyRef.current) markAssistantInviteShown(inviteKeyRef.current);
+    setInviteVisible(false);
+  };
 
   // Scroll to the bottom of the chat when new messages are added or the keyboard opens.
   useEffect(() => {
@@ -103,53 +123,16 @@ export function SupportChat() {
     return () => cancelAnimationFrame(frame);
   }, [messages, open, sending, visualViewport]);
 
-  const send = async () => {
-    const text = message.trim();
-    if (!text || sending) return;
-    setMessages((current) => [...current, { role: "user", text }]);
-    setMessage("");
-    setSending(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/support/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: text,
-          history: messages.slice(1).slice(-MAX_HISTORY_MESSAGES),
-        }),
-      });
-      const data: { reply?: string; error?: string } = await response.json();
-      if (!response.ok || !data.reply)
-        throw new Error(data.error || "Support chat is unavailable.");
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", text: data.reply! },
-      ]);
-    } catch {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          text: "Tuna is currently unavailable. Please try again later.",
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
+  const openChat = () => {
+    dismissInvite();
+    setOpen(true);
   };
 
-  const startNewChat = () => {
-    if (sending) return;
-    setMessages([initialMessage]);
-    setMessage("");
-    try {
-      sessionStorage.removeItem(CHAT_SESSION_STORAGE_KEY);
-    } catch {
-      // The state reset still works when browser storage is unavailable.
-    }
-  };
+  const notice = sessionExpired
+    ? SESSION_EXPIRED_NOTICE
+    : rateLimited
+      ? rateLimitNotice(retrySeconds)
+      : null;
 
   return (
     <Box
@@ -180,8 +163,8 @@ export function SupportChat() {
           <Box
             sx={{
               p: { xs: 1.25, sm: 1.5 },
-              bgcolor: "primary.main",
-              color: "primary.contrastText",
+              bgcolor: theme.headerBg,
+              color: theme.headerColor,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -189,10 +172,8 @@ export function SupportChat() {
             }}
           >
             <Box sx={{ minWidth: 0 }}>
-              <Typography fontWeight="bold">TunaBank support</Typography>
-              <Typography variant="caption">
-                Never share passwords or verification codes.
-              </Typography>
+              <Typography fontWeight="bold">{theme.title}</Typography>
+              <Typography variant="caption">{theme.caption}</Typography>
             </Box>
             <Box
               sx={{
@@ -235,7 +216,7 @@ export function SupportChat() {
                 <RestartAltIcon />
               </IconButton>
               <IconButton
-                aria-label="Close support chat"
+                aria-label={theme.closeLabel}
                 onClick={() => setOpen(false)}
                 color="inherit"
               >
@@ -267,7 +248,7 @@ export function SupportChat() {
                   px: 1.25,
                   py: 0.8,
                   borderRadius: 2,
-                  bgcolor: item.role === "user" ? "primary.light" : "grey.100",
+                  bgcolor: item.role === "user" ? theme.userBubble : "grey.100",
                   whiteSpace: "pre-wrap",
                   overflowWrap: "anywhere",
                 }}
@@ -277,11 +258,50 @@ export function SupportChat() {
             ))}
             {sending && <CircularProgress size={20} sx={{ m: 1 }} />}
           </Box>
+          {showSuggestions && (
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.75,
+                px: { xs: 1.25, sm: 1.5 },
+                pb: 0.5,
+                flexShrink: 0,
+              }}
+            >
+              {ASSISTANT_SUGGESTIONS.map((suggestion) => (
+                <Chip
+                  key={suggestion}
+                  label={suggestion}
+                  size="small"
+                  variant="outlined"
+                  onClick={() => void send(suggestion)}
+                  disabled={!canSend}
+                  sx={{ borderColor: theme.buttonAccent, color: theme.buttonAccent }}
+                />
+              ))}
+            </Box>
+          )}
+          {notice && (
+            <Box
+              role="status"
+              aria-live="polite"
+              sx={{
+                px: { xs: 1.25, sm: 1.5 },
+                py: 0.5,
+                flexShrink: 0,
+                color: "warning.dark",
+                bgcolor: "warning.light",
+              }}
+            >
+              <Typography variant="caption">{notice}</Typography>
+            </Box>
+          )}
           <Box
             component="form"
             onSubmit={(event) => {
               event.preventDefault();
-              void send();
+              void send(input);
             }}
             sx={{
               display: "flex",
@@ -295,63 +315,142 @@ export function SupportChat() {
             <TextField
               size="small"
               fullWidth
-              placeholder="Ask about TunaBank"
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              inputProps={{ maxLength: 1500 }}
-              disabled={sending}
+              placeholder={theme.placeholder}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              inputProps={{ maxLength: MAX_INPUT_CHARS }}
+              disabled={inputDisabled}
             />
             <Button
               type="submit"
               variant="contained"
               aria-label="Send message"
-              sx={{ minWidth: 44, px: 1 }}
-              disabled={sending || !message.trim()}
+              sx={{ minWidth: 44, px: 1, ...(theme.sendBg ? { bgcolor: theme.sendBg } : {}) }}
+              disabled={!canSend || !input.trim()}
             >
               <SendIcon />
             </Button>
           </Box>
         </Paper>
       ) : (
-        <Tooltip title="Ask about TunaBank">
-          {isMobile ? (
-            <IconButton
-              aria-label="Open TunaBank support chat"
-              onClick={() => setOpen(true)}
-              size="large"
+        <Box sx={{ position: "relative", display: "inline-flex" }}>
+          {inviteVisible && mode === "assistant" && (
+            <Box
+              role="status"
               sx={{
-                bgcolor: "#ffffff",
-                color: "#0f766e",
-                border: "1px solid #0f766e",
-                boxShadow: 3,
-                "&:hover": { bgcolor: "#f0fdfa", boxShadow: 4 },
+                position: "absolute",
+                top: { xs: "calc(100% + 8px)", sm: "auto" },
+                bottom: { xs: "auto", sm: "calc(100% + 8px)" },
+                left: { xs: 0, sm: "auto" },
+                right: { xs: "auto", sm: 0 },
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: 1.5,
+                py: 1,
+                borderRadius: 3,
+                background: "linear-gradient(135deg, #ffffff, #f5f3ff)",
+                color: theme.buttonAccent,
+                border: `1px solid ${theme.buttonAccent}`,
+                boxShadow: "0 10px 28px rgba(91, 33, 182, 0.26)",
+                width: 276,
+                maxWidth: "calc(100vw - 24px)",
+                boxSizing: "border-box",
+                transformOrigin: { xs: "top left", sm: "bottom right" },
+                animation: "inviteEnter 380ms cubic-bezier(.2,.8,.2,1) both, inviteNudge 2.8s ease-in-out 1s 2",
+                "@keyframes inviteEnter": {
+                  from: { opacity: 0, transform: "translateY(8px) scale(.94)" },
+                  to: { opacity: 1, transform: "translateY(0) scale(1)" },
+                },
+                "@keyframes inviteNudge": {
+                  "0%, 100%": { transform: "translateY(0)" },
+                  "50%": { transform: "translateY(-4px)" },
+                },
+                "@keyframes inviteWave": {
+                  "0%, 60%, 100%": { transform: "rotate(0deg)" },
+                  "10%, 30%, 50%": { transform: "rotate(16deg)" },
+                  "20%, 40%": { transform: "rotate(-12deg)" },
+                },
+                "@media (prefers-reduced-motion: reduce)": { animation: "none" },
               }}
             >
-              <ChatBubbleOutlineIcon />
-            </IconButton>
-          ) : (
-            <Button
-              aria-label="Open TunaBank support chat"
-              onClick={() => setOpen(true)}
-              variant="contained"
-              startIcon={<ChatBubbleOutlineIcon />}
-              sx={{
-                minHeight: 46,
-                px: 2,
-                borderRadius: 23,
-                boxShadow: 4,
-                fontWeight: 800,
-                fontSize: "0.9rem",
-                bgcolor: "#ffffff",
-                color: "#0f766e",
-                border: "1px solid #0f766e",
-                "&:hover": { bgcolor: "#f0fdfa", boxShadow: 6 },
-              }}
-            >
-              Chat with Tuna
-            </Button>
+              <Button
+                onClick={openChat}
+                sx={{ textAlign: "left", textTransform: "none", color: "inherit", p: 0.5, lineHeight: 1.25, flex: 1, minWidth: 0 }}
+              >
+                <Box component="span" sx={{ display: "block" }}>
+                  <Box
+                    component="span"
+                    aria-hidden="true"
+                    sx={{
+                      display: "inline-block",
+                      mr: 0.75,
+                      fontSize: "1.2rem",
+                      transformOrigin: "70% 70%",
+                      animation: "inviteWave 1.8s ease-in-out .55s 2",
+                      "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+                    }}
+                  >
+                    👋
+                  </Box>
+                  <Typography component="span" variant="body2" fontWeight={900}>
+                    Your assistant is here
+                  </Typography>
+                  <Typography component="span" variant="caption" sx={{ display: "block", mt: 0.35, color: "text.secondary", fontWeight: 700 }}>
+                    {ASSISTANT_INVITE_TEXT}
+                  </Typography>
+                </Box>
+              </Button>
+              <IconButton
+                aria-label="Dismiss assistant invitation"
+                size="small"
+                onClick={dismissInvite}
+                sx={{ color: theme.buttonAccent, p: 0.25 }}
+              >
+                <CloseIcon fontSize="inherit" />
+              </IconButton>
+            </Box>
           )}
-        </Tooltip>
+          <Tooltip title={theme.tooltip}>
+            {isMobile ? (
+              <IconButton
+                aria-label={theme.openLabel}
+                onClick={openChat}
+                size="large"
+                sx={{
+                  bgcolor: "#ffffff",
+                  color: theme.buttonAccent,
+                  border: `1px solid ${theme.buttonAccent}`,
+                  boxShadow: 3,
+                  "&:hover": { bgcolor: theme.buttonHover, boxShadow: 4 },
+                }}
+              >
+                <ChatBubbleOutlineIcon />
+              </IconButton>
+            ) : (
+              <Button
+                aria-label={theme.openLabel}
+                onClick={openChat}
+                variant="contained"
+                startIcon={<ChatBubbleOutlineIcon />}
+                sx={{
+                  minHeight: 46,
+                  px: 2,
+                  borderRadius: 23,
+                  boxShadow: 4,
+                  fontWeight: 800,
+                  fontSize: "0.9rem",
+                  bgcolor: "#ffffff",
+                  color: theme.buttonAccent,
+                  border: `1px solid ${theme.buttonAccent}`,
+                  "&:hover": { bgcolor: theme.buttonHover, boxShadow: 6 },
+                }}
+              >
+                {theme.buttonText}
+              </Button>
+            )}
+          </Tooltip>
+        </Box>
       )}
     </Box>
   );

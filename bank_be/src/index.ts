@@ -28,7 +28,10 @@ app.use(cors({
     } else {
       callback(new Error("Not allowed by CORS"));
     }
-  }
+  },
+  // Retry-After is not readable cross-origin unless it is exposed. Both chat
+  // modes use it for the "try again in X seconds" countdown.
+  exposedHeaders: ["Retry-After"],
 }));
 
 setupSwagger(app); //mounts swagger docs at /api-docs

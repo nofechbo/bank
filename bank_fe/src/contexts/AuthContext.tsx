@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
+import { isExpiredJwt } from "../utils/authToken";
 
 // Context shape shared across the app
 interface AuthContextType {
@@ -27,8 +28,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     const storedEmail = localStorage.getItem("email");
-    if (storedToken) setToken(storedToken);
-    if (storedEmail) setEmail(storedEmail);
+    if (storedToken && storedEmail && !isExpiredJwt(storedToken)) {
+      setToken(storedToken);
+      setEmail(storedEmail);
+    } else {
+      // A browser may retain an expired/incomplete session after closing the
+      // app. Do not let it unlock protected pages while the server would reject it.
+      localStorage.removeItem("token");
+      localStorage.removeItem("email");
+    }
 
     setInitialized(true);
   }, []);
@@ -85,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!token, token, email, initialized, login, logout, setEmail }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!token && !!email && !isExpiredJwt(token), token, email, initialized, login, logout, setEmail }}>
 
       {children}
     </AuthContext.Provider>

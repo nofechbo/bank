@@ -8,7 +8,11 @@ export const MAX_HISTORY_CHARS = 6_000;
 export const INJECTION_PATTERN =
   /(?:ignore|override|reveal|print|show).{0,60}(?:previous|system|developer|instructions?|prompt)|(?:you are now|act as).{0,60}(?:system|developer|unrestricted)/i;
 export const UNSAFE_REPLY_PATTERN =
-  /(?:here(?:'|’)s|here is) (?:a )?(?:thinking|reasoning|analysis) process|\b(?:analyze|analyse) user input\b|\bcheck constraints(?: and instructions)?\b|\bdetermine (?:the )?category of (?:the )?user request\b|\b(?:system|developer|hidden) instructions?\b/i;
+  /(?:here(?:'|’)s|here is) (?:a )?(?:thinking|reasoning|analysis) process|\b(?:analyze|analyse) user input\b|\bcheck constraints(?: and instructions)?\b|\bdetermine (?:the )?category of (?:the )?user request\b|\b(?:system|developer|hidden) instructions?\b|\buser safety\s*:|\b(?:moderation_bypassed|response_completed|endpoint_unavailable)\b|\[(?:log|request|response)_[\w-]+\]|https?:\/\/openrouter\.ai\/api\//i;
+/** A content-safety classifier is not a customer-support chat model. The free
+ * router is dynamic, so reject this family if it is selected and return the
+ * ordinary safe fallback rather than its diagnostic output. */
+export const UNSUITABLE_SUPPORT_MODEL_PATTERN = /(?:content[-_ ]?safety|moderation)/i;
 export const TUNA_MASCOT_SUBJECT_PATTERN = /\btuna\b/;
 export const TUNA_MASCOT_QUESTION_PATTERN =
   /\b(?:who|why|what|tell|about|name|named|call|called|mascot|cat)\b/;

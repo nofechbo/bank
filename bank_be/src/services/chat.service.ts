@@ -6,6 +6,7 @@ import {
   SAFE_REPLY_FALLBACK,
   SYSTEM_INSTRUCTIONS,
   TUNA_MASCOT_REPLY,
+  UNSUITABLE_SUPPORT_MODEL_PATTERN,
   UNSAFE_REPLY_PATTERN,
 } from "../utils/chatUtils/chat.consts.js";
 import { ChatLimitError, reserveChatRequest, reserveChatModelCall } from "../services/chatRateLimit.service.js";
@@ -142,12 +143,15 @@ export const chatService = async (body: any, ip: string | undefined): Promise<Se
 
     // Free routed models can occasionally emit their scratch work. Do not
     // expose it to customers, even if it repeats server-side instructions.
-    if (UNSAFE_REPLY_PATTERN.test(reply)) {
+    if (UNSAFE_REPLY_PATTERN.test(reply) || UNSUITABLE_SUPPORT_MODEL_PATTERN.test(response.model ?? "")) {
       chatLog("unsafe_model_output_discarded", {
         chatRequestId,
         provider: PROVIDER,
         providerResponseId: response.id,
         model: response.model,
+        reason: UNSUITABLE_SUPPORT_MODEL_PATTERN.test(response.model ?? "")
+          ? "unsuitable_support_model"
+          : "diagnostic_or_reasoning_output",
       });
       return { status: 200, body: { reply: SAFE_REPLY_FALLBACK }, headers };
     }

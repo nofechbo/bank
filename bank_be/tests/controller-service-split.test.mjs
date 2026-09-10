@@ -171,6 +171,13 @@ test('chat preserves model responses, output filtering and Retry-After headers',
   const filtered = response();
   await chat({ body: { message: 'How do bank transfers work?' }, ip: 'model-test' }, filtered);
   assert.deepEqual(filtered.body, { reply: SAFE_REPLY_FALLBACK });
+  create.mock.mockImplementation(async () => ({
+    output_text: 'User Safety: safe\n[log_70db85] post https://openrouter.ai/api/v1/responses',
+    id: 'test', model: 'nvidia/nemotron-3.5-content-safety:free',
+  }));
+  const diagnostic = response();
+  await chat({ body: { message: 'What is a bank?' }, ip: 'model-test' }, diagnostic);
+  assert.deepEqual(diagnostic.body, { reply: SAFE_REPLY_FALLBACK });
   for (let i = 0; i < DEFAULT_CHAT_REQUESTS_PER_MINUTE; i++) {
     const mascot = response();
     await chat({ body: { message: 'Who is Tuna?' }, ip: 'limit-test' }, mascot);

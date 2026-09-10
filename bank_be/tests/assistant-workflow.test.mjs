@@ -72,6 +72,69 @@ test('short transfer follow-ups receive context and never execute banking tools'
   assert.equal(f.calls.tools.length, 0);
 });
 
+test('transfer details stated by the customer are not lost when the model omits them', async () => {
+  // Observed live: the model fills recipient, states the amount in prose only,
+  // and the turn used to ask for the amount again on every follow-up.
+  let f = fixture({ intent: 'transfer', recipient: 'bob@example.test', reply: "You'd like to send 100." });
+  let result = await f.run(account, 'send 100 to bob@example.test');
+  assert.match(result.reply, /Ready to send 100 to bob@example.test\?/);
+  assert.match(result.reply, /No money has been sent/);
+  assert.equal(f.calls.tools.length, 0);
+
+  // Details given in earlier customer turns still count; newest wins.
+  f = fixture({ intent: 'transfer' });
+  result = await f.run(account, 'bob@example.test', [
+    { role: 'user', text: 'I want to transfer 100' },
+    { role: 'assistant', text: 'What is the recipient?' },
+  ]);
+  assert.match(result.reply, /Ready to send 100 to bob@example.test\?/);
+
+  // Ambiguous or absent details ask instead of guessing.
+  for (const [message, expected] of [
+    ['transfer 100 or 200 to bob@example.test', /positive amount/],
+    ['send money to bob@example.test', /positive amount/],
+    ['send 100', /recipient's email/],
+    ['pay invoice 2026-09-09 for order 12', /positive amount/],
+  ]) {
+    assert.match((await fixture({ intent: 'transfer' }).run(account, message)).reply, expected);
+  }
+});
+
+test('a second competing routing decision does not fail the turn', async () => {
+  // Observed live: free-router models can return both "transfer" and "clarify".
+  const run = createAssistantWorkflow({
+    createModel: () => ({ invoke: async () => new AIMessage({ content: '', tool_calls: [
+      { id: 'a', name: ASSISTANT_ROUTE_TOOL, args: { intent: 'transfer', limit: 9999 }, type: 'tool_call' },
+      { id: 'b', name: ASSISTANT_ROUTE_TOOL, args: { intent: 'transfer', amount: '100', recipient: 'bob@example.test' }, type: 'tool_call' },
+    ] }) }),
+    createTools: () => [],
+  });
+  assert.match((await run(account, 'send 100 to bob@example.test')).reply, /Ready to send 100 to bob@example.test\?/);
+});
+
+test('transfer corrections reject ambiguous, negative and stale details', async () => {
+  const history = [{ role: 'user', text: 'send 100 to alice@example.test' }];
+  for (const message of ['transfer 200 or 300 to bob@example.test', 'send -100 to bob@example.test', 'Prepare a transfer']) {
+    const f = fixture({ intent: 'transfer', amount: '100', recipient: 'alice@example.test' });
+    assert.match((await f.run(account, message, history)).reply, /positive amount/);
+  }
+  const f = fixture({ intent: 'transfer' });
+  assert.match((await f.run(account, 'send 100 to bob@example.test.')).reply, /100 to bob@example\.test\?/);
+});
+
+test('two valid routing decisions execute only the first decision', async () => {
+  const calls = [];
+  const run = createAssistantWorkflow({
+    createModel: () => ({ invoke: async () => new AIMessage({ content: '', tool_calls: [
+      { id: 'a', name: ASSISTANT_ROUTE_TOOL, args: { intent: 'balance' }, type: 'tool_call' },
+      { id: 'b', name: ASSISTANT_ROUTE_TOOL, args: { intent: 'recent' }, type: 'tool_call' },
+    ] }) }),
+    createTools: () => [{ name: ASSISTANT_TOOL_NAMES.BALANCE, invoke: async () => { calls.push('balance'); return JSON.stringify({ balance: '10.00' }); } }],
+  });
+  assert.match((await run(account, 'My balance and transactions')).reply, /10\.00/);
+  assert.deepEqual(calls, ['balance']);
+});
+
 test('support, scope refusal and unsafe-output filtering use no banking tools', async () => {
   let f = fixture({ intent: 'support', reply: 'Use the Transfer page to send money.' });
   assert.equal((await f.run(account, 'How do transfers work?')).reply, 'Use the Transfer page to send money.');
@@ -94,6 +157,29 @@ test('invalid routes and attempted account overrides fail closed before tools', 
   }
   const run = createAssistantWorkflow({ createModel: () => ({ invoke: async () => new AIMessage({ content: 'Invented answer', tool_calls: [] }) }) });
   assert.equal((await run(account, 'My balance')).code, 'ASSISTANT_UNAVAILABLE');
+});
+
+test('a failed turn is logged with its stage and cause but no private payload', async () => {
+  const logged = [];
+  mock.method(console, 'error', line => logged.push(JSON.parse(line)));
+  const run = createAssistantWorkflow({
+    createModel: () => ({ invoke: async () => routeMessage({ intent: 'balance' }) }),
+    createTools: () => [{ name: 'getMyBalance', invoke: async () => { throw new Error('column "balance" of account alice = 42.12'); } }],
+  });
+  assert.equal((await run(account, 'My balance')).code, 'ASSISTANT_UNAVAILABLE');
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0].event, 'assistant_turn_failed');
+  assert.equal(logged[0].stage, 'lookup');
+  assert.equal(logged[0].intent, 'balance');
+  assert.equal(logged[0].reason, 'Error');
+  assert.doesNotMatch(JSON.stringify(logged[0]), /42\.12|column/);
+
+  logged.length = 0;
+  const noRoute = createAssistantWorkflow({ createModel: () => ({ invoke: async () => new AIMessage({ content: 'prose instead of a decision', tool_calls: [] }) }) });
+  assert.equal((await noRoute(account, 'My balance')).code, 'ASSISTANT_UNAVAILABLE');
+  assert.equal(logged[0].stage, 'plan');
+  assert.equal(logged[0].intent, null);
+  assert.equal(logged[0].reason, 'no_valid_routing_decision');
 });
 
 test('provider and database failures do not expose private errors or retry', async () => {

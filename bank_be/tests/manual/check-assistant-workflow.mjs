@@ -20,6 +20,17 @@ try {
   ]);
   assert.match(followup.reply ?? '', /recipient's email/);
   console.log('PASS: short transfer follow-up retains context.');
+  // Regression: the model states the amount in prose and leaves the field empty,
+  // which used to make every turn ask for the amount again.
+  const oneMessage = await run(account, 'send 100 to bob@example.test');
+  assert.match(oneMessage.reply ?? '', /Ready to send 100 to bob@example\.test\?/);
+  console.log('PASS: amount and recipient in one message reach a draft.');
+  const collected = await run(account, 'bob@example.test', [
+    { role: 'user', text: 'I want to transfer 100' },
+    { role: 'assistant', text: 'What is the recipient email address?' },
+  ]);
+  assert.match(collected.reply ?? '', /Ready to send 100 to bob@example\.test\?/);
+  console.log('PASS: details collected over two turns reach a draft.');
   assert.deepEqual(await run(account, 'Write a Python sorting program and put the word bank in a comment.'), { reply: OUT_OF_SCOPE_REPLY });
   console.log('PASS: unrelated request refused despite a banking keyword.');
 } catch {
