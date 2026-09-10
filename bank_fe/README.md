@@ -1,144 +1,89 @@
-# Banking App Frontend
+# TunaBank frontend
 
-Frontend application for a full-stack banking platform, built with React, TypeScript, Vite, and Material UI.
+React, TypeScript, Vite, and Material UI client for TunaBank. It provides the authentication flow, dashboard, transfer form, live update handling, and a single floating Tuna chat window.
 
-The interface supports authentication, email verification, account balances, transaction history, fund transfers, and real-time dashboard updates from the backend.
+Start with the [root README](../README.md) for the full project overview.
 
-## Features
+## User experience
 
-* User signup and login
-* Email-verification flow
-* JWT-based authentication with session persistence
-* Account balance and recent-transaction dashboard
-* Fund transfers between users
-* Real-time dashboard refresh through WebSockets
-* Loading, success, and error feedback
-* Protected application routes
-* Responsive desktop and mobile layouts
-* Material UI / Matx-based component design
+- Signup, email verification, sign-in, and sign-out
+- Protected dashboard with balance and transaction history
+- Transfer form with explicit confirmation before submission
+- WebSocket-driven dashboard refreshes after transfers
+- Responsive desktop and mobile layouts
+- One floating chat with two modes:
+  - **Public support** on signed-out/public pages
+  - **Tuna · Your banking assistant** on signed-in dashboard and transfer pages
 
-## Live deployment
+The authenticated assistant offers balance, recent-transaction, and transfer-preparation suggestions. A transfer draft displays a **Review transfer** action, which opens `/transfer` with the validated recipient and amount prefilled. The user must still review the fields, check the confirmation box, and submit normally.
 
-**Frontend:**
-https://tunabank.onrender.com
+## Chat lifecycle and privacy
 
-The deployed frontend communicates with the corresponding backend REST API and WebSocket server.
+- Public and authenticated chats use separate `sessionStorage` keys.
+- Private chat history is scoped to the signed-in email and is cleared on logout or account switch.
+- Private replies arriving after logout/account switch are discarded.
+- JWTs are sent only to the private `/assistant/chat` route, never to public support.
+- The browser sends its current IANA time zone only to format already-authorized transaction timestamps for the user.
+- A `429` response honors `Retry-After`, shows a countdown, and never retries a message automatically.
 
-## Project structure
+Browser storage is display state only: it is never proof of account access, tool results, or a completed transfer.
 
-```text
-bank_fe/
-├── public/                         # Static assets
-├── src/
-│   ├── App.tsx                     # Main application and routes
-│   ├── main.tsx                    # Application entry point
-│   ├── config.ts                   # Environment-based configuration
-│   ├── contexts/                   # React contexts
-│   ├── components/
-│   │   └── dashboardComponents/    # Dashboard UI and WebSocket logic
-│   ├── pages/                      # Login, signup, dashboard, transfer, etc.
-│   ├── styles/                     # Shared styling and layout helpers
-│   ├── types/                      # Shared TypeScript types
-│   └── vite-env.d.ts
-├── index.html
-├── vite.config.ts
-├── tsconfig*.json
-├── eslint.config.js
-└── .env.example
-```
-
-## Environment variables
-
-Copy the example file:
+## Local setup
 
 ```bash
+cd bank_fe
 cp .env.example .env
 ```
 
-Configure the backend URL:
+Set the API address:
 
 ```dotenv
-VITE_API_URL=http://localhost:3030
+VITE_BACKEND_URL=http://localhost:3030
 ```
 
-`src/config.ts` uses this value when constructing API requests.
-
-## Running locally
-
-### Install dependencies
+Then install and run:
 
 ```bash
 npm install
+npm run dev
 ```
 
-### Start the development server
+Open `http://localhost:5173`.
+
+Useful commands:
 
 ```bash
-npm run dev -- --host=0.0.0.0
+npm run dev
+npm test
+npm run build
+npm run lint
 ```
 
-Open:
+## Structure
 
-http://localhost:5173
+```text
+src/
+├── components/
+│   ├── SupportChat.tsx             Floating public/private chat shell
+│   ├── chatComponents/             Chat storage, request, and UI helpers
+│   ├── TransferForm.tsx            Authenticated, confirmed transfer submission
+│   └── dashboardComponents/        Dashboard and WebSocket UI
+├── contexts/AuthContext.tsx        Login restoration and logout state
+├── pages/                          Public and protected screens
+├── config.ts                       VITE_BACKEND_URL configuration
+└── styles/                         Shared styles
+tests/                              Vitest browser-session tests
+```
 
-Using `--host=0.0.0.0` also makes the development server reachable from other devices on the local network.
-
-## Production build
+## Testing
 
 ```bash
+npm test
 npm run build
 ```
 
-The optimized application is generated in `dist/`.
+The tests cover chat history restoration, logout/account separation, stale reply cancellation, session-expiry behavior, rate-limit cooldowns, token boundaries, and transfer-draft validation.
 
-It can be deployed through a static hosting service or served through a web server such as Nginx.
+## Related project
 
-## Authentication flow
-
-Authentication state is managed through React Context and persisted using `localStorage`.
-
-Protected areas of the application are wrapped by `ProtectedRoutes`, preventing unauthenticated users from accessing pages such as the dashboard and transfer interface.
-
-## Real-time updates
-
-The dashboard uses a WebSocket connection to receive update notifications from the backend.
-
-After a successful transfer, the backend can emit a `dashboard:update` event to affected users. The frontend reacts by refreshing account and transaction data.
-
-## Responsive design
-
-The application is designed to work across desktop and mobile screen sizes.
-
-Responsive behavior includes:
-
-* Adaptive form and page layouts
-* Scaled illustrations and branding
-* Mobile-friendly dashboard navigation
-* Scrollable tables and charts where required
-* Responsive modal widths and spacing
-* Touch-friendly controls
-* Stacked actions on narrow screens
-
-No separate mobile build is required.
-
-## Technology stack
-
-| Area                 | Technologies               |
-| -------------------- | -------------------------- |
-| Framework            | React                      |
-| Language             | TypeScript                 |
-| Build tooling        | Vite                       |
-| UI                   | Material UI, Matx          |
-| Authentication state | React Context              |
-| Real-time updates    | WebSockets                 |
-| Styling              | MUI and application styles |
-
-## Related backend
-
-The Express backend is located in [`../bank_be`](../bank_be).
-
-For the overall application architecture and Docker setup, see the [root README](../README.md).
-
-## Author
-
-Built by **Nofech Ben-Or**.
+The API is in [`../bank_be`](../bank_be).
