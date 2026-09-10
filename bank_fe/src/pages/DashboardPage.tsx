@@ -11,8 +11,8 @@ import ErrorModal from "../components/ErrorModal"
 import WelcomeCard from "../components/dashboardComponents/WelcomeCard"
 import TransactionList from "../components/dashboardComponents/TransactionList"
 import DashboardChart from "../components/dashboardComponents/DashboardChart"
-import { Box, Button, Card, useMediaQuery, useTheme } from "@mui/material"
-import { useDashboardSocket } from "../components/dashboardComponents/UseDashboardSocket"
+import { Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, useMediaQuery, useTheme } from "@mui/material"
+import { useDashboardSocket, type VideoCallInvitation } from "../components/dashboardComponents/UseDashboardSocket"
 import { ActionButtons } from "../components/dashboardComponents/ActionButtons"
 
 export default function DashboardPage() {
@@ -21,6 +21,7 @@ export default function DashboardPage() {
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [mobileTab, setMobileTab] = useState<"transactions" | "chart">("transactions");
+    const [incomingCall, setIncomingCall] = useState<VideoCallInvitation | null>(null);
     const navigate = useNavigate();
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
@@ -70,7 +71,15 @@ export default function DashboardPage() {
         token,
         userEmail: email ?? null,
         onUpdate: fetchDashboard,
+        onVideoCallInvite: setIncomingCall,
     });
+
+    const acceptIncomingCall = () => {
+        if (!incomingCall) return;
+        const { roomName } = incomingCall;
+        setIncomingCall(null);
+        navigate(`/video-call/${encodeURIComponent(roomName)}`, { state: { returnTo: "/dashboard" } });
+    };
     
     return (
         <Box sx={PageBox}>
@@ -194,6 +203,17 @@ export default function DashboardPage() {
                     </Box>
                 </Box>
             )}
+
+            <Dialog open={incomingCall !== null} onClose={() => setIncomingCall(null)}>
+                <DialogTitle>Incoming video call</DialogTitle>
+                <DialogContent>
+                    {incomingCall && `Incoming video call from ${incomingCall.callerEmail}.`}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setIncomingCall(null)}>Decline</Button>
+                    <Button variant="contained" onClick={acceptIncomingCall}>Accept</Button>
+                </DialogActions>
+            </Dialog>
 
         </Box>
     );

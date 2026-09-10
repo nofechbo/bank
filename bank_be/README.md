@@ -1,6 +1,6 @@
 # TunaBank backend
 
-Express and TypeScript API for TunaBank. It owns authentication, account and transfer data, WebSocket refresh notifications, email verification, public support chat, and the authenticated banking assistant.
+Express and TypeScript API for TunaBank. It owns authentication, account and transfer data, WebSocket refresh and video-call invitations, email verification, public support chat, and the authenticated banking assistant.
 
 For the project overview and local quick start, begin with the [root README](../README.md).
 
@@ -9,6 +9,7 @@ For the project overview and local quick start, begin with the [root README](../
 - JWT authentication, revoked-token checks, signup, verification, and logout
 - PostgreSQL persistence through Prisma
 - Dashboard data, authenticated transfers, and WebSocket refresh events
+- `POST /dashboard/video-call`: validates a verified recipient, creates a Jitsi room name, and sends a targeted WebSocket invitation
 - `POST /support/chat`: public support only; no token or account access
 - `POST /assistant/chat`: authenticated, read-only account assistant
 - Swagger UI at `/api-docs`
@@ -27,6 +28,18 @@ The model cannot select an account or execute a transfer. Transfer guidance prod
 Chat history received from the browser is untrusted context, not evidence or authorization. The service uses fresh database values for account facts, limits concurrent/model/tool work, and applies shared in-memory IP, user, and daily model-call limits to both chat routes. These counters are intentionally process-local and reset on restart.
 
 Free OpenRouter models sometimes return prose instead of a required routing tool call. Clear balance, transaction, summary, and transfer intents have a narrow local fallback; malformed tool calls still fail closed.
+
+## Video-call endpoint
+
+`POST /dashboard/video-call` requires the existing bearer-token authentication and accepts:
+
+```json
+{ "toEmail": "recipient@example.com" }
+```
+
+The endpoint normalizes and validates the address, rejects self/unknown/unverified recipients, and generates a unique `bank-<UUID>` room name. It sends the recipient's connected dashboard socket `{ "type": "video-call:invite", "roomName": "...", "callerEmail": "..." }` and returns `{ "roomName": "...", "delivered": true | false }`; no call or invitation is stored in PostgreSQL.
+
+`delivered: false` means that the recipient has no active dashboard WebSocket connection. This is expected in the deliberately simple, online-only learning-project flow.
 
 ## Local setup
 
@@ -76,9 +89,9 @@ src/
 ├── controllers/        HTTP route handlers
 ├── middleware/         JWT and revoked-token checks
 ├── services/assistant/ LangChain/LangGraph workflow and scoped data tools
-├── services/           Authentication, transfer, dashboard, chat, and quota services
+├── services/           Authentication, transfer, dashboard, video-call, chat, and quota services
 ├── utils/              Validation, prompts, logging, and shared constants
-├── websockets/         Dashboard-update server
+├── websockets/         Dashboard-update and targeted video-call invitation server
 └── index.ts            Express application entry point
 prisma/schema.prisma    PostgreSQL models
 tests/                  Node test suite
@@ -87,7 +100,7 @@ swagger.yaml            OpenAPI specification
 
 ## Tests and privacy notes
 
-`npm test` covers JWT expiry/revocation, body-identity forgery, cross-account transaction access, exact assistant decimals, provider failures, quota limits, stale workflow behavior, and transfer drafts.
+`npm test` covers JWT expiry/revocation, body-identity forgery, cross-account transaction access, exact assistant decimals, provider failures, quota limits, stale workflow behavior, transfer drafts, and video-call recipient validation.
 
 Avoid logging prompts, browser history, tokens, credentials, or account data. Existing chat logs contain operational metadata only. Account data sent to OpenRouter leaves this backend; review provider retention and privacy settings before handling non-demo information.
 

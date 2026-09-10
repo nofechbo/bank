@@ -5,9 +5,15 @@ interface UseDashboardSocketOptions {
     token: string | null;
     userEmail: string | null;
     onUpdate: () => void;
+    onVideoCallInvite?: (invitation: VideoCallInvitation) => void;
 }
 
-export function useDashboardSocket({ token, userEmail, onUpdate}: UseDashboardSocketOptions) {
+export interface VideoCallInvitation {
+    roomName: string;
+    callerEmail: string;
+}
+
+export function useDashboardSocket({ token, userEmail, onUpdate, onVideoCallInvite}: UseDashboardSocketOptions) {
     
     useEffect(() => {
         if (!token || !userEmail) return;
@@ -30,6 +36,13 @@ export function useDashboardSocket({ token, userEmail, onUpdate}: UseDashboardSo
                     if (message.type === "dashboard:update") {
                         onUpdate();
                     }
+                    if (
+                        message.type === "video-call:invite"
+                        && typeof message.roomName === "string"
+                        && typeof message.callerEmail === "string"
+                    ) {
+                        onVideoCallInvite?.({ roomName: message.roomName, callerEmail: message.callerEmail });
+                    }
                 } catch (e) {
                     console.warn("Ignored malformed WebSocket message:", event.data, e);
                 }
@@ -47,5 +60,5 @@ export function useDashboardSocket({ token, userEmail, onUpdate}: UseDashboardSo
             isActive = false;
             if (ws) ws.close();
         };
-    }, [token, userEmail, onUpdate]);
+    }, [token, userEmail, onUpdate, onVideoCallInvite]);
 }

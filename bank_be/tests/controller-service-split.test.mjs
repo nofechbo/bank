@@ -14,6 +14,7 @@ import { verifyEmail } from '../dist/controllers/verifyEmail.controller.js';
 import { resendVerificationEmail } from '../dist/controllers/resendVerificationEmail.controller.js';
 import { transfer } from '../dist/controllers/transfer.controller.js';
 import { getDashboard } from '../dist/controllers/dashboard.controller.js';
+import { startVideoCall } from '../dist/controllers/videoCall.controller.js';
 import { DEFAULT_CHAT_REQUESTS_PER_MINUTE, TUNA_MASCOT_REPLY, SAFE_REPLY_FALLBACK } from '../dist/utils/chatUtils/chat.consts.js';
 
 process.env.JWT_SECRET = 'controller-split-test-secret';
@@ -157,6 +158,36 @@ test('dashboard keeps account fields and signed, sorted transactions', async () 
   await getDashboard({ user: { email: 'a@example.test' } }, res);
   assert.deepEqual(res.body, { name: 'Alice', email: 'a@example.test', phone: '0501234567', joinedAt: older, balance,
     transactions: [{ type: 'received', email: 'c@example.test', amount: received, date: newer }, { type: 'sent', email: 'b@example.test', amount: -10, date: older }] });
+});
+
+test('video calls validate the recipient and return a unique room without a database write', async () => {
+  let lookup;
+  replaceDatabaseMethod(dbInstance.user, 'findUnique', async args => {
+    lookup = args;
+    return { email: 'b@example.test', isVerified: true };
+  });
+  const res = response();
+  await startVideoCall({ user: { email: 'a@example.test' }, body: { toEmail: ' B@EXAMPLE.TEST ' } }, res);
+  assert.deepEqual(lookup, { where: { email: 'b@example.test' }, select: { email: true, isVerified: true } });
+  assert.equal(res.statusCode, 200);
+  assert.match(res.body.roomName, /^bank-[0-9a-f-]{36}$/);
+  assert.equal(res.body.delivered, false);
+
+  const self = response();
+  await startVideoCall({ user: { email: 'a@example.test' }, body: { toEmail: 'a@example.test' } }, self);
+  assert.equal(self.statusCode, 409);
+  assert.deepEqual(self.body, { error: 'You cannot start a video call with yourself' });
+
+  const invalid = response();
+  await startVideoCall({ user: { email: 'a@example.test' }, body: { toEmail: 'not-an-email' } }, invalid);
+  assert.equal(invalid.statusCode, 400);
+  assert.deepEqual(invalid.body, { error: 'A valid recipient email is required' });
+
+  replaceDatabaseMethod(dbInstance.user, 'findUnique', async () => null);
+  const unknown = response();
+  await startVideoCall({ user: { email: 'a@example.test' }, body: { toEmail: 'missing@example.test' } }, unknown);
+  assert.equal(unknown.statusCode, 404);
+  assert.deepEqual(unknown.body, { error: 'Recipient is not a verified registered user' });
 });
 
 test('chat preserves model responses, output filtering and Retry-After headers', async () => {

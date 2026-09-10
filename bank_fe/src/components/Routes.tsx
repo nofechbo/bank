@@ -6,6 +6,7 @@ import HomePage from "../pages/HomePage";
 import ProtectedRoutes from './ProtectedRoutes';
 import DashboardPage from '../pages/DashboardPage';
 import TransferPage from '../pages/TransferPage';
+import VideoCallPage from '../pages/VideoCallPage';
 
 function AppRoutes() {
     return (
@@ -20,6 +21,7 @@ function AppRoutes() {
             <Route element={<ProtectedRoutes />} >
                 <Route path='/dashboard' element={<DashboardPage />} />
                 <Route path='/transfer' element={<TransferPage />} />
+                <Route path='/video-call/:roomName' element={<VideoCallPage />} />
             </Route>
         </Routes>
     )

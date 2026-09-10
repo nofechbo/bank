@@ -1,6 +1,6 @@
 # TunaBank
 
-TunaBank is a full-stack banking learning project with a React dashboard, an Express/PostgreSQL API, real-time balance updates, and one floating Tuna chat experience.
+TunaBank is a full-stack banking learning project with a React dashboard, an Express/PostgreSQL API, real-time balance updates, a pre-transfer Jitsi video-call flow, and one floating Tuna chat experience.
 
 The chat intentionally has two modes:
 
@@ -20,17 +20,24 @@ The chat intentionally has two modes:
 - View a balance and transfer history
 - Send money to another verified TunaBank user through the normal transfer form
 - Receive dashboard refresh notifications through WebSockets
+- Start a Jitsi video call with a verified recipient before submitting a transfer
 - Ask public support questions without signing in
 - Ask the authenticated assistant for a fresh balance, recent transactions, a transaction summary, or help preparing a transfer
 
 The assistant’s **Review transfer** action only opens the existing form with a validated recipient and amount. The customer must review the values, check the confirmation box, and submit through the normal authenticated endpoint before money can move.
+
+## Video calls
+
+The transfer page can start a video call with the recipient before money is sent. The backend validates that the email belongs to another verified user, generates a new Jitsi room name, and uses the existing authenticated WebSocket connection to deliver an invitation to that recipient’s open dashboard.
+
+The recipient can accept or decline from the dashboard. Calls are intentionally online-only for this learning-project version: no call history, missed-call persistence, database records, or push notifications are created. See [video-call-plan.txt](./video-call-plan.txt) for the feature decisions and implementation status.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   Browser[React + Vite] -->|REST / JWT| API[Express + TypeScript]
-  Browser <-->|WebSocket refreshes| API
+  Browser <-->|WebSocket refreshes + call invitations| API
   API --> Prisma[Prisma]
   Prisma --> Postgres[(PostgreSQL)]
   API --> PublicChat[Public support chat]
@@ -38,6 +45,7 @@ flowchart LR
   PublicChat --> LLM[OpenRouter / OpenAI]
   Assistant --> LLM
   API --> Mail[SMTP email verification]
+  Browser --> Jitsi[Jitsi Meet iframe]
 ```
 
 ## Assistant safety model
@@ -76,7 +84,7 @@ cd bank
    ```bash
    cd bank_fe
    cp .env.example .env
-   # Set VITE_BACKEND_URL=http://localhost:3030
+   # Set VITE_BACKEND_URL=http://localhost:3030 and VITE_JITSI_DOMAIN=meet.jit.si
    npm install
    npm run dev
    ```
@@ -91,7 +99,7 @@ To enable AI chat, set a server-only `OPENROUTER_API_KEY`; public support can al
 | --- | --- |
 | [`bank_fe`](./bank_fe) | React, TypeScript, Vite, and Material UI application |
 | [`bank_be`](./bank_be) | Express API, Prisma schema, assistant workflow, tests, and Swagger |
-| [`ai-banking-assistant-plan.txt`](./ai-banking-assistant-plan.txt) | Implementation and security decisions for the assistant |
+| [`video-call-plan.txt`](./video-call-plan.txt) | Video-call implementation plan, status, and manual verification checklist |
 
 See the [backend README](./bank_be/README.md) for API, environment, and test details, and the [frontend README](./bank_fe/README.md) for UI-specific setup.
 
@@ -102,7 +110,7 @@ cd bank_be && npm test
 cd ../bank_fe && npm test && npm run build
 ```
 
-The automated tests cover authentication, revoked tokens, account ownership, bounded assistant tools, untrusted-history resistance, quota behavior, transfer-draft safety, and browser chat lifecycle behavior.
+The automated tests cover authentication, revoked tokens, account ownership, bounded assistant tools, untrusted-history resistance, quota behavior, transfer-draft safety, the video-call endpoint, and browser chat lifecycle behavior. A manual two-browser test with two verified accounts is still needed to confirm live invitation delivery and browser camera/microphone permissions.
 
 ## Docker
 

@@ -162,6 +162,51 @@ paths:
         '400':
           description: Invalid email or insufficient funds
 
+  /dashboard/video-call:
+    post:
+      summary: Start a pre-transfer video call with a verified recipient
+      description: Generates a unique Jitsi room and sends an invitation through the recipient's active dashboard WebSocket connection. The call is not stored and the recipient must currently be connected to receive the invitation.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - toEmail
+              properties:
+                toEmail:
+                  type: string
+                  format: email
+                  description: Email address of another verified TunaBank user
+      responses:
+        '200':
+          description: Video-call room created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - roomName
+                  - delivered
+                properties:
+                  roomName:
+                    type: string
+                    example: bank-550e8400-e29b-41d4-a716-446655440000
+                  delivered:
+                    type: boolean
+                    description: Whether the recipient had an active dashboard WebSocket and received the invitation
+        '400':
+          description: Missing or malformed recipient email
+        '401':
+          description: Unauthorized (invalid or expired token)
+        '404':
+          description: Recipient does not exist or is not verified
+        '409':
+          description: Caller attempted to start a call with their own email
+
   /support/chat:
     post:
       summary: Ask the public TunaBank support assistant a question

@@ -4,6 +4,11 @@ import type { Server } from 'http';
 
 const clientMap = new Map<string, WebSocket>();
 
+interface VideoCallInvitation {
+  roomName: string;
+  callerEmail: string;
+}
+
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ server });
 
@@ -37,4 +42,12 @@ export function sendDashboardUpdate(userEmail: string) {
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'dashboard:update' }));
   }
+}
+
+export function sendVideoCallInvite(userEmail: string, invitation: VideoCallInvitation): boolean {
+  const ws = clientMap.get(userEmail);
+  if (ws?.readyState !== WebSocket.OPEN) return false;
+
+  ws.send(JSON.stringify({ type: 'video-call:invite', ...invitation }));
+  return true;
 }

@@ -11,12 +11,16 @@ import {
   Checkbox,
   FormControlLabel,
   Button,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
+  InputAdornment,
+  Tooltip,
 } from "@mui/material";
-import { CheckCircleOutline } from "@mui/icons-material";
+import { CheckCircleOutline, Videocam } from "@mui/icons-material";
 import LoadingButton from "@mui/lab/LoadingButton";
 
 
@@ -27,7 +31,7 @@ interface FormData {
 
 type TransferDraft = { toEmail: string; amount: string };
 
-function readTransferDraft(value: unknown): TransferDraft | null {
+function readAssistantTransferDraft(value: unknown): TransferDraft | null {
     if (typeof value !== "object" || value === null) return null;
     const draft = (value as { transferDraft?: unknown }).transferDraft;
     if (typeof draft !== "object" || draft === null) return null;
@@ -38,16 +42,31 @@ function readTransferDraft(value: unknown): TransferDraft | null {
     return { toEmail, amount };
 }
 
+function readVideoCallDraft(value: unknown): TransferDraft | null {
+    if (typeof value !== "object" || value === null) return null;
+    const draft = (value as { videoCallDraft?: unknown }).videoCallDraft;
+    if (typeof draft !== "object" || draft === null) return null;
+    const { toEmail, amount } = draft as Record<string, unknown>;
+    if (typeof toEmail !== "string" || typeof amount !== "string") return null;
+    return { toEmail, amount };
+}
+
+function isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export default function TransferForm() {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isStartingCall, setIsStartingCall] = useState(false);
     const { token } = useAuth();
-    const [assistantDraft] = useState(() => readTransferDraft(location.state));
+    const [assistantDraft] = useState(() => readAssistantTransferDraft(location.state));
+    const [videoCallDraft] = useState(() => readVideoCallDraft(location.state));
 
     const [formData, setFormData] = useState<FormData>({
-        toEmail: assistantDraft?.toEmail ?? '',
-        amount: assistantDraft?.amount ?? '',
+        toEmail: videoCallDraft?.toEmail ?? assistantDraft?.toEmail ?? '',
+        amount: videoCallDraft?.amount ?? assistantDraft?.amount ?? '',
     });
 
     const [errorMessage, setErrorMessage] = useState('');
@@ -108,6 +127,47 @@ export default function TransferForm() {
         setConfirmed(false);
     };
 
+    const handleStartVideoCall = async () => {
+        const toEmail = formData.toEmail.trim().toLowerCase();
+        if (!isValidEmail(toEmail)) {
+            setErrorMessage("Enter a valid recipient email before starting a video call.");
+            return;
+        }
+
+        setErrorMessage("");
+        setIsStartingCall(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/dashboard/video-call`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ toEmail }),
+            });
+            const data: { roomName?: unknown; delivered?: unknown; error?: string } = await response.json();
+            if (!response.ok || typeof data.roomName !== "string") {
+                throw new Error(data.error || "Unable to start a video call");
+            }
+            if (data.delivered !== true) {
+                setErrorMessage("The recipient is not currently available on their dashboard.");
+                return;
+            }
+
+            navigate(`/video-call/${encodeURIComponent(data.roomName)}`, {
+                state: {
+                    returnTo: "/transfer",
+                    videoCallDraft: { toEmail: formData.toEmail, amount: formData.amount },
+                },
+            });
+        } catch (err) {
+            console.error(err);
+            setErrorMessage(err instanceof Error ? err.message : "Unable to start a video call");
+        } finally {
+            setIsStartingCall(false);
+        }
+    };
+
     return (
         <>
           <StyledCard>
@@ -143,6 +203,26 @@ export default function TransferForm() {
                         onChange={handleChange}
                         required
                         margin="normal"
+                        slotProps={{
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <Tooltip title="Start a video call with recipient">
+                                            <span>
+                                                <IconButton
+                                                    aria-label="Start a video call with recipient"
+                                                    onClick={() => { void handleStartVideoCall(); }}
+                                                    disabled={!isValidEmail(formData.toEmail) || isSubmitting || isStartingCall}
+                                                    edge="end"
+                                                >
+                                                    {isStartingCall ? <CircularProgress size={20} /> : <Videocam />}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
                     />
                     <TextField
                         fullWidth
