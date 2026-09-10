@@ -28,6 +28,17 @@ import {
 } from "./chat.helpers";
 
 type Conversation = { key: string | null; messages: ChatMessage[] };
+export type TransferDraft = Readonly<{ recipient: string; amount: string }>;
+
+function isTransferDraft(value: unknown): value is TransferDraft {
+  if (typeof value !== "object" || value === null) return false;
+  const { recipient, amount } = value as Record<string, unknown>;
+  return typeof recipient === "string"
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)
+    && typeof amount === "string"
+    && /^\d+(?:\.\d{1,2})?$/.test(amount)
+    && Number(amount) > 0;
+}
 
 /** Owns the conversation for whichever mode the viewer is in. Public support
  * and the authenticated assistant never share stored messages, and a reply that
@@ -51,6 +62,7 @@ export function useChatSession() {
   const [retryUntil, setRetryUntil] = useState<number | null>(null);
   const [retrySeconds, setRetrySeconds] = useState(0);
   const [rejectedToken, setRejectedToken] = useState<string | null>(null);
+  const [transferDraft, setTransferDraft] = useState<TransferDraft | null>(null);
   const sessionExpired = mode === "assistant" && token !== null && rejectedToken === token;
 
   const activeKeyRef = useRef<string | null>(null);
@@ -76,6 +88,7 @@ export function useChatSession() {
     setConversation({ key: storageKey, messages: readStoredMessages(storageKey, mode) });
     setInput("");
     setSending(false);
+    setTransferDraft(null);
   }, [initialized, mode, storageKey, token]);
 
   // Keep the conversation for this browser tab/session only.
@@ -115,6 +128,9 @@ export function useChatSession() {
       const requestKey = activeKeyRef.current;
       if (!text || !canSend || !requestKey || requestRef.current) return;
       const requestMode = mode;
+      const timeZone = requestMode === "assistant"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : undefined;
       const previousMessages = conversation.messages;
       const history = submittedHistory(previousMessages);
       const generation = generationRef.current;
@@ -144,7 +160,7 @@ export function useChatSession() {
               // The token is sent to the private route only.
               ...(requestMode === "assistant" && token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ message: text, history }),
+            body: JSON.stringify({ message: text, history, ...(timeZone ? { timeZone } : {}) }),
           },
         );
         if (!isCurrent()) return;
@@ -160,7 +176,7 @@ export function useChatSession() {
           return;
         }
 
-        const data: { reply?: unknown; error?: unknown } = await response.json().catch(() => ({}));
+        const data: { reply?: unknown; error?: unknown; transferDraft?: unknown } = await response.json().catch(() => ({}));
         if (!isCurrent()) return;
 
         if (response.status === 401 && requestMode === "assistant") {
@@ -178,6 +194,9 @@ export function useChatSession() {
         }
         const reply = data.reply.trim();
         updateMessages((current) => [...current, { role: "assistant", text: reply }]);
+        setTransferDraft(requestMode === "assistant" && isTransferDraft(data.transferDraft)
+          ? data.transferDraft
+          : null);
       } catch {
         if (controller.signal.aborted || !isCurrent()) return;
         appendLocal(UNAVAILABLE_MESSAGE);
@@ -195,6 +214,7 @@ export function useChatSession() {
       current.key ? { key: current.key, messages: [openingMessage(mode)] } : current,
     );
     setInput("");
+    setTransferDraft(null);
     removeStoredKey(storageKey);
   }, [mode, sending, storageKey, ready]);
 
@@ -213,5 +233,7 @@ export function useChatSession() {
     rateLimited,
     retrySeconds,
     sessionExpired,
+    transferDraft,
+    clearTransferDraft: () => setTransferDraft(null),
   };
 }

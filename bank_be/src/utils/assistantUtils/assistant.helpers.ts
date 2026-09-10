@@ -89,16 +89,43 @@ export function describeTransferDraft(amount: string, recipient: string): string
 }
 
 /** Amounts come straight from trusted tools; no model arithmetic or guessed currency. */
-export function describeTransaction(transaction: AssistantTransaction): string {
-  const name = transaction.counterpartyName.replace(/[\r\n\t]/g, " ").slice(0, ASSISTANT_MAX_COUNTERPARTY_CHARS);
-  return `You ${transaction.direction} ${transaction.amount} ${transaction.direction === "sent" ? "to" : "from"} ${JSON.stringify(name)} on ${transaction.timestamp} (UTC).`;
+export function normalizeAssistantTimeZone(value: unknown): string {
+  if (typeof value !== "string" || value.length > 100) return "UTC";
+  try {
+    Intl.DateTimeFormat("en-US", { timeZone: value });
+    return value;
+  } catch {
+    return "UTC";
+  }
 }
 
-export function describeTransactions(transactions: AssistantTransaction[]): string {
+function readableTimestamp(timestamp: string, timeZone: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "an unavailable time";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "short",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value ?? "";
+  return `${part("month")} ${part("day")}, ${part("year")} at ${part("hour")}:${part("minute")} ${part("timeZoneName")}`;
+}
+
+export function describeTransaction(transaction: AssistantTransaction, timeZone = "UTC"): string {
+  const name = transaction.counterpartyName.replace(/[\r\n\t]/g, " ").slice(0, ASSISTANT_MAX_COUNTERPARTY_CHARS);
+  return `You ${transaction.direction} ${transaction.amount} ${transaction.direction === "sent" ? "to" : "from"} ${name} on ${readableTimestamp(transaction.timestamp, timeZone)}.`;
+}
+
+export function describeTransactions(transactions: AssistantTransaction[], timeZone = "UTC"): string {
   if (!transactions.length) return "You have no recorded transactions.";
   const lines: string[] = [];
   for (const transaction of transactions) {
-    const line = describeTransaction(transaction);
+    const line = describeTransaction(transaction, timeZone);
     if ([...lines, line].join("\n").length > ASSISTANT_MAX_REPLY_CHARS - ASSISTANT_MAX_COUNTERPARTY_CHARS) break;
     lines.push(line);
   }

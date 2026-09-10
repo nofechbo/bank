@@ -26,7 +26,7 @@ import { dbInstance } from "../../db/prisma.js";
 import type { AssistantAccount, AssistantChatResponse, AssistantTransaction, AssistantSummary, AssistantRoute, AssistantStage } from "../../types/assistant.types.js";
 import { ASSISTANT_ERROR_CODES } from "../../types/assistant.types.js";
 import type { ChatHistoryMessage } from "../../types/chat.types.js";
-import { assistantFailureReason, rejectedRouteFields, assistantRouteSchema, describeTransaction, describeTransactions, describeSummary, describeTransferDraft, extractTransferDetails, safeAssistantReply } from "../../utils/assistantUtils/assistant.helpers.js";
+import { assistantFailureReason, rejectedRouteFields, assistantRouteSchema, describeTransaction, describeTransactions, describeSummary, describeTransferDraft, extractTransferDetails, normalizeAssistantTimeZone, safeAssistantReply } from "../../utils/assistantUtils/assistant.helpers.js";
 import { ASSISTANT_ROUTING_INSTRUCTIONS } from "../../utils/assistantUtils/assistant.prompt.js";
 import { OUT_OF_SCOPE_REPLY, TUNA_MASCOT_REPLY } from "../../utils/chatUtils/chat.consts.js";
 import { isTunaMascotQuestion } from "../../utils/chatUtils/chat.helpers.js";
@@ -43,6 +43,26 @@ export async function resolveAssistantAccount(verifiedEmail: string): Promise<As
 /** Restricts transaction queries to the authenticated user */
 export function ownedTransactionWhere(account: AssistantAccount) {
   return { OR: [{ fromUserId: account.id }, { toUserId: account.id }] };
+}
+
+/** Free-router models occasionally return prose despite a required tool choice.
+ * This fallback only classifies unmistakable customer requests; 
+ */
+function fallbackRouteForMissingToolCall(message: string, history: ChatHistoryMessage[]): AssistantRoute {
+  const text = message.toLowerCase();
+  const customerContext = [message, ...history.filter(item => item.role === "user").map(item => item.text)]
+    .join(" ")
+    .toLowerCase();
+  if (/\b(?:balance|funds)\b|\bhow much (?:money )?(?:do i have|is in)/.test(text)) return { intent: "balance" };
+  const transactionId = message.match(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/i)?.[0];
+  if (transactionId) return { intent: "transaction", transactionId };
+  if (/\b(?:recent|latest|last)\b.*\b(?:transaction|transfer|payment)\b|\b(?:transaction|transfer)\s+history\b/.test(text))
+    return { intent: "recent", ...(/\b(?:latest|last)\b/.test(text) ? { limit: 1 } : {}) };
+  if (/\b(?:summary|summarize|total|spent|received)\b/.test(text)) return { intent: "summary" };
+  if (/\b(?:send|transfer|pay)\b/.test(text)
+    || (/\b(?:send|transfer|pay)\b/.test(customerContext) && (/\b(?:yes|correct|confirm)\b/.test(text) || /@|^\s*\$?\d/.test(text))))
+    return { intent: "transfer" };
+  return { intent: "clarify" };
 }
 
 /** Configures model calls with tool binding, quota checks, output limits and
@@ -74,6 +94,7 @@ export function createAssistantModel(tools: StructuredToolInterface[], requiredT
 const WorkflowState = Annotation.Root({
   route: Annotation<AssistantRoute>(),
   reply: Annotation<string>(),
+  transferDraft: Annotation<{ recipient: string; amount: string } | undefined>(),
 });
 
 /** Per-turn graph: plan -> data tool or clarification/support -> response.
@@ -89,7 +110,8 @@ export function createAssistantWorkflow(dependencies: {
   const makeModel = dependencies.createModel ?? createAssistantModel;
   const makeTools = dependencies.createTools ?? createAssistantTools;
 
-  return async (account: AssistantAccount, message: string, history: ChatHistoryMessage[] = [], signal?: AbortSignal): Promise<AssistantChatResponse> => {
+  return async (account: AssistantAccount, message: string, history: ChatHistoryMessage[] = [], signal?: AbortSignal, requestedTimeZone?: unknown): Promise<AssistantChatResponse> => {
+    const timeZone = normalizeAssistantTimeZone(requestedTimeZone);
     if (isTunaMascotQuestion(message)) return { reply: TUNA_MASCOT_REPLY };
     if (activeAccounts.has(account.id) || activeAccounts.size >= ASSISTANT_MAX_CONCURRENT_TURNS)
       throw new ChatLimitError(ASSISTANT_BUSY_RETRY_SECONDS);
@@ -136,7 +158,10 @@ export function createAssistantWorkflow(dependencies: {
             .filter(call => call.name === ASSISTANT_ROUTE_TOOL)
             .map(call => assistantRouteSchema.safeParse(call.args));
           routeDecisions = decisions.length;
-          const route = decisions.find(parsed => parsed.success)?.data;
+          const route = decisions.find(parsed => parsed.success)?.data
+            // A malformed tool call remains a failure. Only a missing call gets
+            // the narrow local fallback needed for unreliable free providers.
+            ?? (decisions.length === 0 ? fallbackRouteForMissingToolCall(message, history) : undefined);
           if (!route) {
             rejectedFields = rejectedRouteFields(decisions);
             throw new Error(ASSISTANT_FAILURES.NO_VALID_ROUTE);
@@ -169,8 +194,8 @@ export function createAssistantWorkflow(dependencies: {
           // Render account facts from fresh tool data, not model-generated numbers.
           switch (route.intent) {
             case "balance": return { reply: `Your current balance is ${data.balance}.` };
-            case "recent": return { reply: describeTransactions(data.transactions as AssistantTransaction[]) };
-            case "transaction": return { reply: data.transaction ? describeTransaction(data.transaction as AssistantTransaction) : "That transaction is unavailable for your account." };
+            case "recent": return { reply: describeTransactions(data.transactions as AssistantTransaction[], timeZone) };
+            case "transaction": return { reply: data.transaction ? describeTransaction(data.transaction as AssistantTransaction, timeZone) : "That transaction is unavailable for your account." };
             case "summary": return { reply: describeSummary(data as AssistantSummary) };
             default: throw new Error(ASSISTANT_FAILURES.UNSUPPORTED_INTENT);
           }
@@ -188,7 +213,13 @@ export function createAssistantWorkflow(dependencies: {
             const recipient = stated.blockedRecipient ? undefined : stated.recipient ?? (stated.newRequest ? undefined : route.recipient);
             if (!amount || Number(amount) <= 0) return { reply: ASSISTANT_TRANSFER_AMOUNT_QUESTION };
             if (!recipient) return { reply: ASSISTANT_TRANSFER_RECIPIENT_QUESTION };
-            return { reply: describeTransferDraft(amount, recipient) };
+            // This is only a validated navigation draft. The Transfer page must
+            // independently validate it and the normal authenticated endpoint
+            // remains the sole authority that can move money.
+            return {
+              reply: describeTransferDraft(amount, recipient),
+              transferDraft: { amount, recipient },
+            };
           }
           return { reply: safeAssistantReply(route.reply ?? ASSISTANT_CLARIFY_REPLY) };
         })
@@ -198,7 +229,9 @@ export function createAssistantWorkflow(dependencies: {
         .addEdge("respond", END)
         .compile();
       const state = await graph.invoke({}, { recursionLimit: ASSISTANT_GRAPH_RECURSION_LIMIT, signal: turnSignal });
-      return { reply: state.reply };
+      return state.transferDraft
+        ? { reply: state.reply, transferDraft: state.transferDraft }
+        : { reply: state.reply };
     };
 
     // Keep the concurrency slot until pending work settles, even after a timeout;

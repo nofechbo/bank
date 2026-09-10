@@ -1,6 +1,6 @@
 TUNABANK AI BANKING ASSISTANT — AGREED PLAN
 Date: 2026-09-08
-Status: Steps 1, 2, 3 and 4 implemented. Continue one step at a time when requested.
+Status: Steps 1–7 implemented and validated.
 
 COMPLETION NOTES
 
@@ -8,9 +8,15 @@ Step 1 — Added the authenticated assistant endpoint with server-derived accoun
 
 Step 2 — Added LangChain/OpenRouter integration and narrow read-only balance, transaction, and summary tools with strict input validation and ownership filtering. Account totals use database decimal values, and the model cannot select an account or execute a tool beyond the server-defined set. Free-router availability and behavior can vary.
 
-Step 3 — Added the bounded LangGraph workflow for account questions, support, clarifications, and transfer guidance; account facts come from fresh read-only tool results and untrusted browser history is never evidence. Each turn is bounded by deadlines, quotas, and concurrency limits, and transfer guidance cannot verify recipients or move money. Free-router responses can vary, so invalid decisions fail safely and diagnostic logs omit private payloads.
+Step 3 — Added the bounded LangGraph workflow for account questions, support, clarifications, and transfer guidance; account facts come from fresh read-only tool results and untrusted browser history is never evidence. Each turn is bounded by deadlines, quotas, and concurrency limits, and transfer guidance cannot verify recipients or move money. Free-router responses can vary: malformed routing decisions fail safely, while a missing routing call falls back only for unmistakable local intents (or asks a safe clarification) rather than reporting the assistant unavailable. Diagnostic logs omit private payloads.
 
 Step 4 — Added one floating chat with separate public and authenticated modes, JWTs only on the private route, scoped session history, logout/account-switch cleanup, stale-reply protection, 401 handling, and Retry-After countdowns. The assistant has its own styling, suggestions, and accessible animated invitation; unsafe provider diagnostic output is discarded. Transfer chat remains informational only: it collects safe draft details but does not prefill or execute a transfer, which is step 5.
+
+Step 5 — Transfer preparation now returns a server-validated, structured amount/recipient draft only after the bounded assistant workflow has collected unambiguous customer-supplied values. The chat shows a Review transfer action that navigates to /transfer with that draft in navigation state. The form independently validates restored navigation state, visibly labels it as an unsubmitted assistant draft, and requires the normal authenticated form confirmation/submission; field edits clear that confirmation. No chat action calls the transfer endpoint.
+
+Step 6 — Verified the existing session-storage lifecycle: authenticated history is restored only after auth initialization, separated by account, cleared with its invitation on logout/account change, and stale requests are aborted/discarded. The shared in-memory request/model quota tests cover public/private IP limits, user limits, daily/global atomic reservation, expiry/reset, and concurrent assistant turn limits. No conversation database storage was added.
+
+Step 7 — Focused automated checks now cover forged browser history and account overrides, cross-account transaction scoping, malformed/expired/revoked JWT rejection, logout/account-switch/refresh behavior, bounded tools and failures, injection/out-of-scope handling, short transfer follow-ups, quota/concurrency handling, and the transfer-draft boundary. Backend: 39 tests pass. Frontend: 7 tests pass, plus a production TypeScript/Vite build. Live provider behavior was not invoked because the suite uses synthetic provider responses and no real OpenRouter key.
 
 PURPOSE AND STACK
 

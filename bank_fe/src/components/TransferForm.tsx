@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { API_BASE_URL } from "../config";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { StyledCard, ContentBox } from "../styles/Styles";
 import ErrorModal from "./ErrorModal";
@@ -25,14 +25,29 @@ interface FormData {
     amount: string;
 }
 
+type TransferDraft = { toEmail: string; amount: string };
+
+function readTransferDraft(value: unknown): TransferDraft | null {
+    if (typeof value !== "object" || value === null) return null;
+    const draft = (value as { transferDraft?: unknown }).transferDraft;
+    if (typeof draft !== "object" || draft === null) return null;
+    const { recipient, amount } = draft as Record<string, unknown>;
+    if (typeof recipient !== "string" || typeof amount !== "string") return null;
+    const toEmail = recipient.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail) || !/^\d+(?:\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) return null;
+    return { toEmail, amount };
+}
+
 export default function TransferForm() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { token } = useAuth();
+    const [assistantDraft] = useState(() => readTransferDraft(location.state));
 
     const [formData, setFormData] = useState<FormData>({
-        toEmail: '',
-        amount: '',
+        toEmail: assistantDraft?.toEmail ?? '',
+        amount: assistantDraft?.amount ?? '',
     });
 
     const [errorMessage, setErrorMessage] = useState('');
@@ -45,6 +60,7 @@ export default function TransferForm() {
             ...prevData,
             [name]: value
         }));
+        setConfirmed(false);
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -110,6 +126,11 @@ export default function TransferForm() {
                 <Typography variant="h5" mb={2}>
                     Transfer Funds:
                 </Typography>
+                {assistantDraft && (
+                    <Box role="status" sx={{ mb: 1.5, p: 1.25, borderRadius: 1, bgcolor: "secondary.50", border: "1px solid", borderColor: "secondary.light" }}>
+                        <Typography variant="body2">Your assistant prepared this draft. Review both fields and submit the transfer yourself; no money has been sent.</Typography>
+                    </Box>
+                )}
     
                 <Box component="form" onSubmit={handleSubmit}>
                     <TextField
@@ -133,7 +154,6 @@ export default function TransferForm() {
                         margin="normal"
                     />
 
-                    {/*how to make it mandatory? that clicking "transfer" will not work */}
                     <Box mt={3}>
                         <FormControlLabel
                             control={

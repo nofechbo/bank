@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -33,6 +34,7 @@ import { useChatSession } from "./chatComponents/useChatSession";
 
 /** One floating chat with two authentication-dependent modes: public TunaBank support, and the authenticated banking assistant. **/
 export function SupportChat() {
+  const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 599.95px)");
   const [open, setOpen] = useState(false);
   const [showNewChatLabel, setShowNewChatLabel] = useState(false);
@@ -59,6 +61,8 @@ export function SupportChat() {
     rateLimited,
     retrySeconds,
     sessionExpired,
+    transferDraft,
+    clearTransferDraft,
   } = useChatSession();
   const theme = CHAT_MODE_THEME[mode];
   const showSuggestions = mode === "assistant";
@@ -280,6 +284,23 @@ export function SupportChat() {
                   sx={{ borderColor: theme.buttonAccent, color: theme.buttonAccent }}
                 />
               ))}
+            </Box>
+          )}
+          {transferDraft && mode === "assistant" && (
+            <Box sx={{ mx: { xs: 1.25, sm: 1.5 }, mb: 1, p: 1, border: "1px solid", borderColor: "secondary.light", borderRadius: 1, bgcolor: "secondary.50" }}>
+              <Typography variant="body2">Draft: {transferDraft.amount} to {transferDraft.recipient}</Typography>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => {
+                  clearTransferDraft();
+                  setOpen(false);
+                  navigate("/transfer", { state: { transferDraft } });
+                }}
+                sx={{ mt: 0.75, bgcolor: theme.buttonAccent }}
+              >
+                Review transfer
+              </Button>
             </Box>
           )}
           {notice && (

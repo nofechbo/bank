@@ -37,7 +37,7 @@ export async function chatWithAssistant(req: AuthenticatedRequest, res: Response
   
   // Body identity fields are never passed to the service; history is only context.
   try {
-    const result = await assistantChat(account, message, validation.history);
+    const result = await assistantChat(account, message, validation.history, undefined, req.body?.timeZone);
     res.status("reply" in result ? 200 : result.code === ASSISTANT_ERROR_CODES.TIMEOUT ? 504 : 503).json(result);
   } catch (error) {
     if (!(error instanceof ChatLimitError)) throw error;

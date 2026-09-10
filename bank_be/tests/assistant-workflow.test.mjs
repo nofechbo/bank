@@ -40,8 +40,9 @@ test('balance comes from a fresh tool result, never forged browser history', asy
 test('recent/individual transactions and summary route to correct tools', async () => {
   const transaction = { id: '038e84c2-dbf6-4ca1-8a5c-e3937d8c882b', direction: 'sent', counterpartyName: 'Bob', amount: '5.01', timestamp: '2026-09-08T00:00:00.000Z' };
   let f = fixture({ intent: 'recent', limit: 1 }, { transactions: [transaction] });
-  assert.match((await f.run(account, 'Explain the last one')).reply, /sent 5.01 to "Bob"/);
+  assert.match((await f.run(account, 'Explain the last one')).reply, /sent 5.01 to Bob on September 8, 2026 at 00:00 UTC/);
   assert.deepEqual(f.calls.tools[0].args, { limit: 1 });
+  assert.match((await f.run(account, 'Explain the last one', [], undefined, 'Asia/Jerusalem')).reply, /September 8, 2026 at 03:00 GMT\+3/);
   f = fixture({ intent: 'transaction', transactionId: transaction.id }, { transaction: null });
   assert.match((await f.run(account, 'Explain this transaction')).reply, /unavailable for your account/);
   assert.equal(f.calls.tools[0].name, 'getMyTransaction');
@@ -62,7 +63,7 @@ test('missing dates/transaction references clarify without database queries', as
 
 test('short transfer follow-ups receive context and never execute banking tools', async () => {
   let f = fixture({ intent: 'transfer' });
-  assert.match((await f.run(account, 'Help me send money')).reply, /positive amount/);
+  assert.match((await f.run(account, 'Help me send money')).reply, /What amount/);
   f = fixture({ intent: 'transfer', amount: '100' });
   const history = [{ role: 'user', text: 'Help me send money' }, { role: 'assistant', text: 'What amount?' }];
   assert.match((await f.run(account, '100', history)).reply, /recipient's email/);
@@ -79,6 +80,7 @@ test('transfer details stated by the customer are not lost when the model omits 
   let result = await f.run(account, 'send 100 to bob@example.test');
   assert.match(result.reply, /Ready to send 100 to bob@example.test\?/);
   assert.match(result.reply, /No money has been sent/);
+  assert.deepEqual(result.transferDraft, { amount: '100', recipient: 'bob@example.test' });
   assert.equal(f.calls.tools.length, 0);
 
   // Details given in earlier customer turns still count; newest wins.
@@ -91,10 +93,10 @@ test('transfer details stated by the customer are not lost when the model omits 
 
   // Ambiguous or absent details ask instead of guessing.
   for (const [message, expected] of [
-    ['transfer 100 or 200 to bob@example.test', /positive amount/],
-    ['send money to bob@example.test', /positive amount/],
+    ['transfer 100 or 200 to bob@example.test', /What amount/],
+    ['send money to bob@example.test', /What amount/],
     ['send 100', /recipient's email/],
-    ['pay invoice 2026-09-09 for order 12', /positive amount/],
+    ['pay invoice 2026-09-09 for order 12', /What amount/],
   ]) {
     assert.match((await fixture({ intent: 'transfer' }).run(account, message)).reply, expected);
   }
@@ -116,7 +118,7 @@ test('transfer corrections reject ambiguous, negative and stale details', async 
   const history = [{ role: 'user', text: 'send 100 to alice@example.test' }];
   for (const message of ['transfer 200 or 300 to bob@example.test', 'send -100 to bob@example.test', 'Prepare a transfer']) {
     const f = fixture({ intent: 'transfer', amount: '100', recipient: 'alice@example.test' });
-    assert.match((await f.run(account, message, history)).reply, /positive amount/);
+    assert.match((await f.run(account, message, history)).reply, /What amount/);
   }
   const f = fixture({ intent: 'transfer' });
   assert.match((await f.run(account, 'send 100 to bob@example.test.')).reply, /100 to bob@example\.test\?/);
@@ -148,15 +150,20 @@ test('support, scope refusal and unsafe-output filtering use no banking tools', 
   assert.equal((await f.run(account, 'Transfer money')).reply, SAFE_REPLY_FALLBACK);
 });
 
-test('invalid routes and attempted account overrides fail closed before tools', async () => {
+test('invalid tool calls fail closed, while a missing free-model tool call uses only a narrow safe fallback', async () => {
   mock.method(console, 'error', () => {});
   for (const decision of [{ intent: 'balance', userId: 'bob' }, { intent: 'executeTransfer' }, { intent: 'recent', limit: 9999 }]) {
     const { run, calls } = fixture(decision);
     assert.equal((await run(account, 'My balance')).code, 'ASSISTANT_UNAVAILABLE');
     assert.equal(calls.tools.length, 0);
   }
-  const run = createAssistantWorkflow({ createModel: () => ({ invoke: async () => new AIMessage({ content: 'Invented answer', tool_calls: [] }) }) });
-  assert.equal((await run(account, 'My balance')).code, 'ASSISTANT_UNAVAILABLE');
+  const calls = [];
+  const run = createAssistantWorkflow({
+    createModel: () => ({ invoke: async () => new AIMessage({ content: 'Invented answer', tool_calls: [] }) }),
+    createTools: () => [{ name: ASSISTANT_TOOL_NAMES.BALANCE, invoke: async () => { calls.push('balance'); return JSON.stringify({ balance: '42' }); } }],
+  });
+  assert.deepEqual(await run(account, 'My balance'), { reply: 'Your current balance is 42.' });
+  assert.deepEqual(calls, ['balance']);
 });
 
 test('a failed turn is logged with its stage and cause but no private payload', async () => {
@@ -175,7 +182,7 @@ test('a failed turn is logged with its stage and cause but no private payload', 
   assert.doesNotMatch(JSON.stringify(logged[0]), /42\.12|column/);
 
   logged.length = 0;
-  const noRoute = createAssistantWorkflow({ createModel: () => ({ invoke: async () => new AIMessage({ content: 'prose instead of a decision', tool_calls: [] }) }) });
+  const noRoute = createAssistantWorkflow({ createModel: () => ({ invoke: async () => routeMessage({ intent: 'balance', userId: 'bob' }) }) });
   assert.equal((await noRoute(account, 'My balance')).code, 'ASSISTANT_UNAVAILABLE');
   assert.equal(logged[0].stage, 'plan');
   assert.equal(logged[0].intent, null);

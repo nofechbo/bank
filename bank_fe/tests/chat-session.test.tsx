@@ -89,3 +89,20 @@ test('public requests have no authorization header and countdown releases sendin
   expect(parseRetryAfterSeconds('7200')).toBe(7200);
   expect(parseRetryAfterSeconds(null)).toBe(60);
 });
+
+test('only a validated assistant transfer draft is available for review', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    reply: 'Ready to send 100 to b@example.test?',
+    transferDraft: { amount: '100', recipient: 'b@example.test' },
+  }))));
+  const { result, rerender } = renderHook(() => useChatSession());
+  await act(async () => { await result.current.send('send 100 to b@example.test'); });
+  expect(result.current.transferDraft).toEqual({ amount: '100', recipient: 'b@example.test' });
+
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    reply: 'Unsafe draft', transferDraft: { amount: '-1', recipient: 'not-an-email' },
+  }))));
+  rerender();
+  await act(async () => { await result.current.send('another transfer'); });
+  expect(result.current.transferDraft).toBeNull();
+});
