@@ -1,16 +1,12 @@
-import nodemailer from 'nodemailer';
-
-const APP_NAME = "Tuna Bank LTD"
-const from = `${APP_NAME} <${process.env.GMAIL_ADDRESS}>`;
+const APP_NAME = 'Tuna Bank LTD';
+const senderEmail = process.env.BREVO_SENDER_EMAIL ?? 'tunabankltd@gmail.com';
+const senderName = process.env.BREVO_SENDER_NAME ?? APP_NAME;
 
 export async function sendVerificationEmail(to: string, clientName: string, link: string): Promise<void> {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_ADDRESS,
-            pass: process.env.GMAIL_APP_PASSWORD,
-        },
-    });
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+        throw new Error('BREVO_API_KEY is not configured');
+    }
 
     const message = `<h2>Welcome to ${APP_NAME}!</h2>
                     <p>Dear ${clientName},</p>
@@ -21,10 +17,24 @@ export async function sendVerificationEmail(to: string, clientName: string, link
                     <p>Always here for you,</p>
                     <p>Tuna Bank LTD</p>`;
     
-    const info = await transporter.sendMail({
-        from,
-        to,
-        subject: `verify your email`,
-        html: message,
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'api-key': apiKey,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            sender: {
+                name: senderName,
+                email: senderEmail,
+            },
+            to: [{ email: to, name: clientName }],
+            subject: 'Verify your email',
+            htmlContent: message,
+        }),
     });
+
+    if (!response.ok) {
+        throw new Error(`Brevo failed (${response.status}): ${await response.text()}`);
+    }
 }
