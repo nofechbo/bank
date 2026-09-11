@@ -65,6 +65,10 @@ function fallbackRouteForMissingToolCall(message: string, history: ChatHistoryMe
   return { intent: "clarify" };
 }
 
+function isExplicitLogoutRequest(message: string): boolean {
+  return /^\s*(?:(?:please|can you|could you|would you)\s+)*(?:log\s*(?:me\s*)?out|sign\s*(?:me\s*)?out|logout|signout)\s*[.!?]*\s*$/i.test(message);
+}
+
 /** Configures model calls with tool binding, quota checks, output limits and
  * timeouts. This adapter proposes calls; the graph validates and executes them.
  */
@@ -113,6 +117,9 @@ export function createAssistantWorkflow(dependencies: {
   return async (account: AssistantAccount, message: string, history: ChatHistoryMessage[] = [], signal?: AbortSignal, requestedTimeZone?: unknown): Promise<AssistantChatResponse> => {
     const timeZone = normalizeAssistantTimeZone(requestedTimeZone);
     if (isTunaMascotQuestion(message)) return { reply: TUNA_MASCOT_REPLY };
+    if (isExplicitLogoutRequest(message)) {
+      return { reply: "Ready to sign you out. Confirm below and I'll log you out.", logoutConfirmation: true };
+    }
     if (activeAccounts.has(account.id) || activeAccounts.size >= ASSISTANT_MAX_CONCURRENT_TURNS)
       throw new ChatLimitError(ASSISTANT_BUSY_RETRY_SECONDS);
     activeAccounts.add(account.id);

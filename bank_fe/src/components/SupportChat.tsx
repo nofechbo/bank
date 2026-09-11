@@ -31,10 +31,12 @@ import {
   wasAssistantInviteShown,
 } from "./chatComponents/chat.helpers";
 import { useChatSession } from "./chatComponents/useChatSession";
+import { useAuth } from "../contexts/AuthContext";
 
 /** One floating chat with two authentication-dependent modes: public TunaBank support, and the authenticated banking assistant. **/
 export function SupportChat() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const isMobile = useMediaQuery("(max-width: 599.95px)");
   const [open, setOpen] = useState(false);
   const [showNewChatLabel, setShowNewChatLabel] = useState(false);
@@ -63,6 +65,8 @@ export function SupportChat() {
     sessionExpired,
     transferDraft,
     clearTransferDraft,
+    logoutConfirmation,
+    dismissLogoutConfirmation,
   } = useChatSession();
   const theme = CHAT_MODE_THEME[mode];
   const showSuggestions = mode === "assistant";
@@ -262,6 +266,58 @@ export function SupportChat() {
             ))}
             {sending && <CircularProgress size={20} sx={{ m: 1 }} />}
           </Box>
+          {transferDraft && mode === "assistant" && (
+            <Box sx={{ mx: { xs: 1.25, sm: 1.5 }, mb: 1, p: 1, border: "1px solid", borderColor: "secondary.light", borderRadius: 1, bgcolor: "secondary.50" }}>
+              <Typography variant="body2">Draft: {transferDraft.amount} to {transferDraft.recipient}</Typography>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => {
+                  clearTransferDraft();
+                  setOpen(false);
+                  navigate("/transfer", { state: { transferDraft } });
+                }}
+                sx={{ mt: 0.75, bgcolor: theme.buttonAccent }}
+              >
+                Review transfer
+              </Button>
+            </Box>
+          )}
+          {logoutConfirmation && mode === "assistant" && (
+            <Box sx={{ mx: { xs: 1.25, sm: 1.5 }, mb: 1, p: 1, border: "1px solid", borderColor: "warning.light", borderRadius: 1, bgcolor: "warning.50" }}>
+              <Typography variant="body2">Sign out of TunaBank?</Typography>
+              <Box sx={{ display: "flex", gap: 0.75, mt: 0.75 }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="warning"
+                  onClick={() => {
+                    dismissLogoutConfirmation();
+                    setOpen(false);
+                    void logout();
+                  }}
+                >
+                  Log out
+                </Button>
+                <Button size="small" onClick={dismissLogoutConfirmation}>Cancel</Button>
+              </Box>
+            </Box>
+          )}
+          {notice && (
+            <Box
+              role="status"
+              aria-live="polite"
+              sx={{
+                px: { xs: 1.25, sm: 1.5 },
+                py: 0.5,
+                flexShrink: 0,
+                color: "warning.dark",
+                bgcolor: "warning.light",
+              }}
+            >
+              <Typography variant="caption">{notice}</Typography>
+            </Box>
+          )}
           {showSuggestions && (
             <Box
               sx={{
@@ -284,38 +340,6 @@ export function SupportChat() {
                   sx={{ borderColor: theme.buttonAccent, color: theme.buttonAccent }}
                 />
               ))}
-            </Box>
-          )}
-          {transferDraft && mode === "assistant" && (
-            <Box sx={{ mx: { xs: 1.25, sm: 1.5 }, mb: 1, p: 1, border: "1px solid", borderColor: "secondary.light", borderRadius: 1, bgcolor: "secondary.50" }}>
-              <Typography variant="body2">Draft: {transferDraft.amount} to {transferDraft.recipient}</Typography>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => {
-                  clearTransferDraft();
-                  setOpen(false);
-                  navigate("/transfer", { state: { transferDraft } });
-                }}
-                sx={{ mt: 0.75, bgcolor: theme.buttonAccent }}
-              >
-                Review transfer
-              </Button>
-            </Box>
-          )}
-          {notice && (
-            <Box
-              role="status"
-              aria-live="polite"
-              sx={{
-                px: { xs: 1.25, sm: 1.5 },
-                py: 0.5,
-                flexShrink: 0,
-                color: "warning.dark",
-                bgcolor: "warning.light",
-              }}
-            >
-              <Typography variant="caption">{notice}</Typography>
             </Box>
           )}
           <Box

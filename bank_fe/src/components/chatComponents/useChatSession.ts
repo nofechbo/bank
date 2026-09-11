@@ -63,6 +63,7 @@ export function useChatSession() {
   const [retrySeconds, setRetrySeconds] = useState(0);
   const [rejectedToken, setRejectedToken] = useState<string | null>(null);
   const [transferDraft, setTransferDraft] = useState<TransferDraft | null>(null);
+  const [logoutConfirmation, setLogoutConfirmation] = useState(false);
   const sessionExpired = mode === "assistant" && token !== null && rejectedToken === token;
 
   const activeKeyRef = useRef<string | null>(null);
@@ -89,6 +90,7 @@ export function useChatSession() {
     setInput("");
     setSending(false);
     setTransferDraft(null);
+    setLogoutConfirmation(false);
   }, [initialized, mode, storageKey, token]);
 
   // Keep the conversation for this browser tab/session only.
@@ -176,7 +178,7 @@ export function useChatSession() {
           return;
         }
 
-        const data: { reply?: unknown; error?: unknown; transferDraft?: unknown } = await response.json().catch(() => ({}));
+        const data: { reply?: unknown; error?: unknown; transferDraft?: unknown; logoutConfirmation?: unknown } = await response.json().catch(() => ({}));
         if (!isCurrent()) return;
 
         if (response.status === 401 && requestMode === "assistant") {
@@ -197,6 +199,7 @@ export function useChatSession() {
         setTransferDraft(requestMode === "assistant" && isTransferDraft(data.transferDraft)
           ? data.transferDraft
           : null);
+        setLogoutConfirmation(requestMode === "assistant" && data.logoutConfirmation === true);
       } catch {
         if (controller.signal.aborted || !isCurrent()) return;
         appendLocal(UNAVAILABLE_MESSAGE);
@@ -215,6 +218,7 @@ export function useChatSession() {
     );
     setInput("");
     setTransferDraft(null);
+    setLogoutConfirmation(false);
     removeStoredKey(storageKey);
   }, [mode, sending, storageKey, ready]);
 
@@ -235,5 +239,7 @@ export function useChatSession() {
     sessionExpired,
     transferDraft,
     clearTransferDraft: () => setTransferDraft(null),
+    logoutConfirmation,
+    dismissLogoutConfirmation: () => setLogoutConfirmation(false),
   };
 }

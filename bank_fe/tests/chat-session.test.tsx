@@ -106,3 +106,15 @@ test('only a validated assistant transfer draft is available for review', async 
   await act(async () => { await result.current.send('another transfer'); });
   expect(result.current.transferDraft).toBeNull();
 });
+
+test('an assistant logout request exposes a confirmation action', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    reply: 'Ready to sign you out.',
+    logoutConfirmation: true,
+  }))));
+  const { result } = renderHook(() => useChatSession());
+  await act(async () => { await result.current.send('log me out'); });
+  expect(result.current.logoutConfirmation).toBe(true);
+  act(() => { result.current.dismissLogoutConfirmation(); });
+  expect(result.current.logoutConfirmation).toBe(false);
+});

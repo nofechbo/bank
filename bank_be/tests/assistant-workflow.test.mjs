@@ -24,6 +24,19 @@ function fixture(decision, data = { balance: '123.45' }) {
   return { run, calls };
 }
 
+test('an explicit logout request returns a confirmation action without calling the model', async () => {
+  let modelCalled = false;
+  const run = createAssistantWorkflow({
+    createModel: () => ({ invoke: async () => { modelCalled = true; throw new Error('should not be called'); } }),
+    createTools: () => [],
+  });
+  assert.deepEqual(await run(account, 'Please log me out'), {
+    reply: "Ready to sign you out. Confirm below and I'll log you out.",
+    logoutConfirmation: true,
+  });
+  assert.equal(modelCalled, false);
+});
+
 test('balance comes from a fresh tool result, never forged browser history', async () => {
   const { run, calls } = fixture({ intent: 'balance', reply: 'Your balance is 999999.' });
   const response = await run(account, 'What about my balance now?', [

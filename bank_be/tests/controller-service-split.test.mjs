@@ -2,7 +2,6 @@ import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mock } from 'node:test';
 import bcrypt from 'bcrypt';
-import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import { Responses } from 'openai/resources/responses/responses';
@@ -18,6 +17,7 @@ import { startVideoCall } from '../dist/controllers/videoCall.controller.js';
 import { DEFAULT_CHAT_REQUESTS_PER_MINUTE, TUNA_MASCOT_REPLY, SAFE_REPLY_FALLBACK } from '../dist/utils/chatUtils/chat.consts.js';
 
 process.env.JWT_SECRET = 'controller-split-test-secret';
+process.env.BREVO_API_KEY = 'brevo-test-key';
 const restoreDatabaseMethods = [];
 function replaceDatabaseMethod(target, name, implementation) {
   const original = target[name];
@@ -65,11 +65,14 @@ test('signup keeps validation, hashing, account creation and verification email'
   replaceDatabaseMethod(dbInstance.user, 'create', async ({ data }) => { created = data; return data; });
   mock.method(bcrypt, 'hash', async (password, rounds) => { assert.equal(rounds, 10); return 'hashed-password'; });
   let mail;
-  mock.method(nodemailer, 'createTransport', () => ({ sendMail: async data => { mail = data; } }));
+  mock.method(globalThis, 'fetch', async (_url, options) => {
+    mail = JSON.parse(options.body);
+    return { ok: true };
+  });
   const res = response();
   await signup({ body: { name: ' Alice ', email: ' A@EXAMPLE.TEST ', password: 'password', phone: '0501234567' } }, res);
   assert.deepEqual(created, { name: 'Alice', email: 'a@example.test', password: 'hashed-password', phone: '0501234567', balance: 0, isVerified: false });
-  assert.equal(mail.to, 'a@example.test');
+  assert.equal(mail.to[0].email, 'a@example.test');
   assert.deepEqual(res.body, { message: 'Verification link sent', validForMinutes: 15 });
   assert.equal(res.statusCode, 200);
   const invalid = response();
@@ -112,7 +115,7 @@ test('resend keeps eligibility checks and verification email response', async ()
   assert.equal(res.statusCode, 404);
   assert.deepEqual(res.body, { error: 'email address is already verified' });
   lookup.mock.mockImplementation(async () => ({ email: 'a@example.test', name: 'Alice', isVerified: false }));
-  mock.method(nodemailer, 'createTransport', () => ({ sendMail: async () => {} }));
+  mock.method(globalThis, 'fetch', async () => ({ ok: true }));
   const success = response();
   await resendVerificationEmail({ body: { email: 'a@example.test' } }, success);
   assert.deepEqual(success.body, { message: 'Verification link sent', validForMinutes: 15 });

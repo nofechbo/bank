@@ -20,7 +20,7 @@ export const ASSISTANT_ERROR_CODES = {
 export type AssistantErrorCode = typeof ASSISTANT_ERROR_CODES[keyof typeof ASSISTANT_ERROR_CODES];
 
 export type AssistantChatResponse =
-  | { reply: string; transferDraft?: { recipient: string; amount: string } }
+  | { reply: string; transferDraft?: { recipient: string; amount: string }; logoutConfirmation?: true }
   | { error: string; code: AssistantErrorCode };
 
 export type AssistantTransaction = {
