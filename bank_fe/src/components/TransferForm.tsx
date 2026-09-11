@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../config";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -61,8 +61,8 @@ export default function TransferForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isStartingCall, setIsStartingCall] = useState(false);
     const { token } = useAuth();
-    const [assistantDraft] = useState(() => readAssistantTransferDraft(location.state));
-    const [videoCallDraft] = useState(() => readVideoCallDraft(location.state));
+    const assistantDraft = readAssistantTransferDraft(location.state);
+    const videoCallDraft = readVideoCallDraft(location.state);
 
     const [formData, setFormData] = useState<FormData>({
         toEmail: videoCallDraft?.toEmail ?? assistantDraft?.toEmail ?? '',
@@ -72,6 +72,19 @@ export default function TransferForm() {
     const [errorMessage, setErrorMessage] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
     const [confirmed, setConfirmed] = useState(false);
+
+    // Navigating to /transfer from the assistant while already on this route
+    useEffect(() => {
+        const draft = videoCallDraft ?? assistantDraft;
+        if (!draft) return;
+        setFormData({ toEmail: draft.toEmail, amount: draft.amount });
+        setConfirmed(false);
+    }, [
+        assistantDraft?.amount,
+        assistantDraft?.toEmail,
+        videoCallDraft?.amount,
+        videoCallDraft?.toEmail,
+    ]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
